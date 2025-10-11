@@ -22,3 +22,4 @@ gunicorn
 # Build tools (critical for pkg_resources)
 setuptools>=68.0.0
 wheel
+Pillow
