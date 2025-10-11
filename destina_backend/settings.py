@@ -87,7 +87,9 @@ WSGI_APPLICATION = 'destina_backend.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='postgresql://destina_user:password@localhost:5432/destina_db')
+        default=config('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=True  # <-- Important
     )
 }
 
