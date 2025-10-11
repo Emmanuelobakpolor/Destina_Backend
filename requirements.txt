@@ -8,3 +8,5 @@ requests
 sendgrid==3.6.5
 sendgrid-django==4.2.0
 dj-database-url==2.1.0
+setuptools
+gunicorn
