@@ -1,12 +1,24 @@
+# Core Django dependencies
 Django==4.2.7
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.0
+
+# Database
 psycopg2-binary==2.9.10
+dj-database-url==2.1.0
+
+# Utilities
 python-decouple==3.8
 django-cors-headers==4.3.1
 requests
+
+# Email
 sendgrid==3.6.5
 sendgrid-django==4.2.0
-dj-database-url==2.1.0
-setuptools
+
+# Server
 gunicorn
+
+# Build tools (critical for pkg_resources)
+setuptools>=68.0.0
+wheel
