@@ -189,8 +189,9 @@ class VerifyLoginView(APIView):
 
 class InitiateDriverSignupView(APIView):
     def post(self, request):
-        serializer = InitiateDriverSignupWithFilesSerializer(data=request.data)
+        serializer = InitiateDriverSignupWithFilesSerializer(data=request.POST, files=request.FILES)
         if serializer.is_valid():
+            print("Validated data:", serializer.validated_data)
             email = serializer.validated_data['email']
             # Create user if not exists
             user, created = User.objects.get_or_create(email=email, defaults={'role': 'driver'})
@@ -211,11 +212,12 @@ class InitiateDriverSignupView(APIView):
             profile.city = serializer.validated_data.get('city') or profile.city
             profile.service_type = serializer.validated_data.get('service_type') or profile.service_type
             profile.referral_code = serializer.validated_data.get('referral_code') or profile.referral_code
-            if request.FILES.get('license_document'):
-                profile.license_document = request.FILES['license_document']
-            if request.FILES.get('selfie'):
-                profile.selfie = request.FILES['selfie']
+            if serializer.validated_data.get('license_document'):
+                profile.license_document = serializer.validated_data['license_document']
+            if serializer.validated_data.get('selfie'):
+                profile.selfie = serializer.validated_data['selfie']
             profile.save()
+            print("Profile saved:", profile.first_name, profile.last_name, profile.license_document, profile.selfie)
 
             # Create/update vehicle with vehicle data
             vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
@@ -224,17 +226,18 @@ class InitiateDriverSignupView(APIView):
             vehicle.manufacturer = serializer.validated_data.get('manufacturer') or vehicle.manufacturer
             vehicle.color = serializer.validated_data.get('color') or vehicle.color
             vehicle.plate_number = serializer.validated_data.get('plate_number') or vehicle.plate_number
-            if request.FILES.get('road_worthiness'):
-                vehicle.road_worthiness = request.FILES['road_worthiness']
-            if request.FILES.get('insurance_certificate'):
-                vehicle.insurance_certificate = request.FILES['insurance_certificate']
-            if request.FILES.get('front_image'):
-                vehicle.front_image = request.FILES['front_image']
-            if request.FILES.get('back_image'):
-                vehicle.back_image = request.FILES['back_image']
-            if request.FILES.get('inside_image'):
-                vehicle.inside_image = request.FILES['inside_image']
+            if serializer.validated_data.get('road_worthiness'):
+                vehicle.road_worthiness = serializer.validated_data['road_worthiness']
+            if serializer.validated_data.get('insurance_certificate'):
+                vehicle.insurance_certificate = serializer.validated_data['insurance_certificate']
+            if serializer.validated_data.get('front_image'):
+                vehicle.front_image = serializer.validated_data['front_image']
+            if serializer.validated_data.get('back_image'):
+                vehicle.back_image = serializer.validated_data['back_image']
+            if serializer.validated_data.get('inside_image'):
+                vehicle.inside_image = serializer.validated_data['inside_image']
             vehicle.save()
+            print("Vehicle saved:", vehicle.brand, vehicle.year, vehicle.manufacturer, vehicle.color, vehicle.plate_number, vehicle.front_image, vehicle.back_image, vehicle.inside_image)
 
             # Generate verification code
             code = str(random.randint(100000, 999999))
@@ -290,7 +293,7 @@ class VerifyDriverSignupView(APIView):
 
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
-        serializer = VerifyDriverSignupWithFilesSerializer(data=request.data)
+        serializer = VerifyDriverSignupWithFilesSerializer(data=request.POST, files=request.FILES)
         if serializer.is_valid():
             email = serializer.validated_data['email']
             code = serializer.validated_data['code']
@@ -323,10 +326,10 @@ class VerifyDriverSignupWithFilesView(APIView):
                 profile.city = serializer.validated_data.get('city') or profile.city
                 profile.service_type = serializer.validated_data.get('service_type') or profile.service_type
                 profile.referral_code = serializer.validated_data.get('referral_code') or profile.referral_code
-                if request.FILES.get('license_document'):
-                    profile.license_document = request.FILES['license_document']
-                if request.FILES.get('selfie'):
-                    profile.selfie = request.FILES['selfie']
+                if serializer.validated_data.get('license_document'):
+                    profile.license_document = serializer.validated_data['license_document']
+                if serializer.validated_data.get('selfie'):
+                    profile.selfie = serializer.validated_data['selfie']
                 profile.save()
 
                 # Create/update vehicle with vehicle data
@@ -336,16 +339,16 @@ class VerifyDriverSignupWithFilesView(APIView):
                 vehicle.manufacturer = serializer.validated_data.get('manufacturer') or vehicle.manufacturer
                 vehicle.color = serializer.validated_data.get('color') or vehicle.color
                 vehicle.plate_number = serializer.validated_data.get('plate_number') or vehicle.plate_number
-                if request.FILES.get('road_worthiness'):
-                    vehicle.road_worthiness = request.FILES['road_worthiness']
-                if request.FILES.get('insurance_certificate'):
-                    vehicle.insurance_certificate = request.FILES['insurance_certificate']
-                if request.FILES.get('front_image'):
-                    vehicle.front_image = request.FILES['front_image']
-                if request.FILES.get('back_image'):
-                    vehicle.back_image = request.FILES['back_image']
-                if request.FILES.get('inside_image'):
-                    vehicle.inside_image = request.FILES['inside_image']
+                if serializer.validated_data.get('road_worthiness'):
+                    vehicle.road_worthiness = serializer.validated_data['road_worthiness']
+                if serializer.validated_data.get('insurance_certificate'):
+                    vehicle.insurance_certificate = serializer.validated_data['insurance_certificate']
+                if serializer.validated_data.get('front_image'):
+                    vehicle.front_image = serializer.validated_data['front_image']
+                if serializer.validated_data.get('back_image'):
+                    vehicle.back_image = serializer.validated_data['back_image']
+                if serializer.validated_data.get('inside_image'):
+                    vehicle.inside_image = serializer.validated_data['inside_image']
                 vehicle.save()
 
                 verification.delete()
@@ -356,6 +359,7 @@ class VerifyDriverSignupWithFilesView(APIView):
                     "message": "Driver signup verified with data"
                 }, status=status.HTTP_200_OK)
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
+        print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ResendOTPView(APIView):
