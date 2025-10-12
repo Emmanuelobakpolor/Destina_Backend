@@ -252,6 +252,9 @@ class ResendOTPView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             type = request.data.get('type', 'signup')  # default to signup
+            # Map driver-signup to signup since they use the same verification type
+            if type == 'driver-signup':
+                type = 'signup'
             if type not in ['signup', 'login']:
                 return Response({"error": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
 
