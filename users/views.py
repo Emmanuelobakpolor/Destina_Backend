@@ -81,6 +81,7 @@ class InitiateSignupView(APIView):
                 VerificationCode.objects.filter(email=email, type='signup').delete()  # Clean up
                 return Response({"error": f"Failed to send email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
+        print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifySignupView(APIView):
@@ -251,6 +252,7 @@ class InitiateDriverSignupView(APIView):
                 VerificationCode.objects.filter(email=email, type='signup').delete()  # Clean up
                 return Response({"error": f"Failed to send email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
+        print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyDriverSignupView(APIView):
