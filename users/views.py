@@ -189,7 +189,7 @@ class VerifyLoginView(APIView):
 
 class InitiateDriverSignupView(APIView):
     def post(self, request):
-        serializer = InitiateDriverSignupWithFilesSerializer(data=request.POST, files=request.FILES)
+        serializer = InitiateDriverSignupWithFilesSerializer(data=request.data)
         if serializer.is_valid():
             print("Validated data:", serializer.validated_data)
             email = serializer.validated_data['email']
@@ -293,7 +293,7 @@ class VerifyDriverSignupView(APIView):
 
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
-        serializer = VerifyDriverSignupWithFilesSerializer(data=request.POST, files=request.FILES)
+        serializer = VerifyDriverSignupWithFilesSerializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
             code = serializer.validated_data['code']
