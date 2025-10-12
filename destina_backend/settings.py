@@ -157,4 +157,5 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Email settings for real email verification using SendGrid
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@example.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='emmanuelobakpolor6655@gmail.com')
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
