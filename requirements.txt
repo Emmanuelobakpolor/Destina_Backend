@@ -23,3 +23,7 @@ gunicorn
 setuptools>=68.0.0
 wheel
 Pillow
+
+# Cloud Storage
+boto3
+django-storages

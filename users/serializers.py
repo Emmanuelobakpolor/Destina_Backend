@@ -70,3 +70,62 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False)
+
+
+class VerifyDriverSignupSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6)
+
+class VerifyDriverSignupWithFilesSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6)
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+    # Personal
+    first_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    license_number = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    license_expiry = serializers.DateField(required=False)
+    license_document = serializers.FileField(required=False)
+    selfie = serializers.ImageField(required=False)
+    # Vehicle
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    service_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    year = serializers.IntegerField(required=False)
+    manufacturer = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    color = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    plate_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    road_worthiness = serializers.FileField(required=False)
+    insurance_certificate = serializers.FileField(required=False)
+    front_image = serializers.ImageField(required=False)
+    back_image = serializers.ImageField(required=False)
+    inside_image = serializers.ImageField(required=False)
+    # Basic
+    phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    referral_code = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+class InitiateDriverSignupWithFilesSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    # Personal
+    first_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    license_number = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    license_expiry = serializers.DateField(required=False)
+    license_document = serializers.FileField(required=False)
+    selfie = serializers.ImageField(required=False)
+    # Vehicle
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    service_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    year = serializers.IntegerField(required=False)
+    manufacturer = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    color = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    plate_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    road_worthiness = serializers.FileField(required=False)
+    insurance_certificate = serializers.FileField(required=False)
+    front_image = serializers.ImageField(required=False)
+    back_image = serializers.ImageField(required=False)
+    inside_image = serializers.ImageField(required=False)
+    # Basic
+    phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    referral_code = serializers.CharField(max_length=50, required=False, allow_blank=True)

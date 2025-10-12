@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'storages',
 
     # Local apps
     'users',
@@ -131,6 +132,29 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files (User uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Supabase Storage Configuration
+SUPABASE_URL = config('SUPABASE_URL', default='https://konnghriofsljkgodboj.supabase.co')
+SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvbm5naHJpb2ZzbGprZ29kYm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDIwNjEsImV4cCI6MjA3NTc3ODA2MX0.TLRLe7abZu0nAcMrX5vdsHe4V3HSkYDZxaWB1sPt2zk')
+SUPABASE_BUCKET_NAME = config('SUPABASE_BUCKET_NAME', default='destina-media')
+
+# Use Supabase for media files in production
+if not DEBUG and SUPABASE_URL:
+    AWS_ACCESS_KEY_ID = SUPABASE_ANON_KEY
+    AWS_SECRET_ACCESS_KEY = 'dummy'  # Not needed for Supabase
+    AWS_STORAGE_BUCKET_NAME = SUPABASE_BUCKET_NAME
+    AWS_S3_REGION_NAME = 'us-east-1'  # Dummy region
+    AWS_S3_CUSTOM_DOMAIN = f'{SUPABASE_URL.replace("https://", "")}.supabase.co/storage/v1/object/public/{SUPABASE_BUCKET_NAME}'
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{SUPABASE_URL.replace("https://", "")}.supabase.co/storage/v1/object/public/{SUPABASE_BUCKET_NAME}/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
