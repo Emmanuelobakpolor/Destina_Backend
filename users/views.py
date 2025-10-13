@@ -194,15 +194,11 @@ class VerifyLoginView(APIView):
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
         # CORRECT WAY: Combine request.data and request.FILES
-        data = request.data.copy()  # Make a mutable copy
-        files_dict = dict(request.FILES)  # Convert FILES to dictionary
-        
-        # Merge files into the data
-        for key, file in files_dict.items():
-            data[key] = file
-        
-        serializer = VerifyDriverSignupWithFilesSerializer(data=data)
-        
+        serializer = VerifyDriverSignupWithFilesSerializer(
+            data=request.data,
+            files=request.FILES
+        )
+
         if serializer.is_valid():
             print("Validated data:", serializer.validated_data)  # Debug logging
             
