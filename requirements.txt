@@ -27,3 +27,4 @@ Pillow
 # Cloud Storage
 boto3
 django-storages
+supabase

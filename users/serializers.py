@@ -2,9 +2,20 @@ from rest_framework import serializers
 from .models import User, DriverProfile, Vehicle
 
 class UserSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth']
+        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name']
+
+    def get_display_name(self, obj):
+        if obj.role == 'driver':
+            try:
+                return obj.driver_profile.first_name or 'Driver'
+            except DriverProfile.DoesNotExist:
+                return 'Driver'
+        else:
+            return obj.full_name or 'User'
 
 class SignupSerializer(serializers.Serializer):
     email = serializers.EmailField()

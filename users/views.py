@@ -180,8 +180,10 @@ class VerifyLoginView(APIView):
                         try:
                             profile = user.driver_profile
                             response_data["user"]["verification_status"] = profile.verification_status
+                            response_data["user"]["first_name"] = profile.first_name
                         except DriverProfile.DoesNotExist:
                             response_data["user"]["verification_status"] = None
+                            response_data["user"]["first_name"] = None
                     return Response(response_data, status=status.HTTP_200_OK)
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
@@ -356,6 +358,9 @@ class VerifyDriverSignupWithFilesView(APIView):
                 return Response({
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
+                    "user": {
+                        "first_name": profile.first_name,
+                    },
                     "message": "Driver signup verified with data"
                 }, status=status.HTTP_200_OK)
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
