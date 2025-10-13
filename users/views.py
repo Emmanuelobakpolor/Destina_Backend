@@ -193,11 +193,15 @@ class VerifyLoginView(APIView):
 
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
-        # FIX: Add files=request.FILES to serializer
-        serializer = VerifyDriverSignupWithFilesSerializer(
-            data=request.data, 
-            files=request.FILES  # THIS IS THE CRITICAL MISSING LINE
-        )
+        # CORRECT WAY: Combine request.data and request.FILES
+        data = request.data.copy()  # Make a mutable copy
+        files_dict = dict(request.FILES)  # Convert FILES to dictionary
+        
+        # Merge files into the data
+        for key, file in files_dict.items():
+            data[key] = file
+        
+        serializer = VerifyDriverSignupWithFilesSerializer(data=data)
         
         if serializer.is_valid():
             print("Validated data:", serializer.validated_data)  # Debug logging
@@ -250,6 +254,7 @@ class VerifyDriverSignupWithFilesView(APIView):
                 
                 profile.save()
                 print(f"Profile saved: {profile.first_name} {profile.last_name}")
+                print(f"Profile files - License: {profile.license_document}, Selfie: {profile.selfie}")
 
                 # Create/update vehicle
                 vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
@@ -271,6 +276,7 @@ class VerifyDriverSignupWithFilesView(APIView):
                 
                 vehicle.save()
                 print(f"Vehicle saved: {vehicle.brand} {vehicle.plate_number}")
+                print(f"Vehicle files - Road Worthiness: {vehicle.road_worthiness}, Insurance: {vehicle.insurance_certificate}")
 
                 # Clean up verification code
                 verification.delete()
@@ -282,7 +288,7 @@ class VerifyDriverSignupWithFilesView(APIView):
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
                     "user": {
-                        "first_name": profile.first_name or 'Driver',  # Ensure a name is always returned
+                        "first_name": profile.first_name or 'Driver',
                         "email": user.email,
                         "role": user.role,
                         "verification_status": profile.verification_status
