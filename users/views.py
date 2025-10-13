@@ -167,7 +167,7 @@ class VerifyLoginView(APIView):
                     response_data = {
                         "refresh": str(refresh),
                         "access": str(refresh.access_token),
-                        "user": {
+                        "user": { # This structure should be consistent
                             "id": user.id,
                             "email": user.email,
                             "role": user.role,
@@ -181,9 +181,9 @@ class VerifyLoginView(APIView):
                             profile = user.driver_profile
                             response_data["user"]["verification_status"] = profile.verification_status
                             response_data["user"]["first_name"] = profile.first_name
-                        except DriverProfile.DoesNotExist:
-                            response_data["user"]["verification_status"] = None
-                            response_data["user"]["first_name"] = None
+                        except DriverProfile.DoesNotExist: # Handle case where profile doesn't exist yet
+                            response_data["user"]["verification_status"] = 'pending' # Assume pending if no profile
+                            response_data["user"]["first_name"] = 'Driver' # Default name
                     return Response(response_data, status=status.HTTP_200_OK)
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
@@ -278,7 +278,7 @@ class VerifyDriverSignupWithFilesView(APIView):
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
                     "user": {
-                        "first_name": profile.first_name,  # This fixes the "Hi, Driver" issue
+                        "first_name": profile.first_name or 'Driver',  # Ensure a name is always returned
                         "email": user.email,
                         "role": user.role,
                         "verification_status": profile.verification_status
