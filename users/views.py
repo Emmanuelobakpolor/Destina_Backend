@@ -194,10 +194,7 @@ class VerifyLoginView(APIView):
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
         # FIX: Add files=request.FILES to serializer
-        serializer = VerifyDriverSignupWithFilesSerializer(
-            data=request.data, 
-            files=request.FILES  # THIS IS THE CRITICAL FIX
-        )
+        serializer = VerifyDriverSignupWithFilesSerializer(data=request.data)
         
         if serializer.is_valid():
             print("Validated data:", serializer.validated_data)  # Debug logging
