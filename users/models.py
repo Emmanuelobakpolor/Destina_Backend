@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 import json
 
+
 class UserManager(BaseUserManager):
     def create_user(self, email, role, password=None, **extra_fields):
         if not email:
@@ -24,6 +25,7 @@ class UserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self.create_user(email, role, password, **extra_fields)
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
@@ -48,6 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.email} ({self.role})"
 
+
 class VerificationCode(models.Model):
     email = models.EmailField(null=True)
     code = models.CharField(max_length=6)
@@ -60,6 +63,10 @@ class VerificationCode(models.Model):
 
     class Meta:
         unique_together = ('email', 'type')
+
+    def __str__(self):
+        return f"VerificationCode for {self.email} ({self.type})"
+
 
 class DriverProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='driver_profile')
@@ -75,12 +82,10 @@ class DriverProfile(models.Model):
         choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')],
         default='pending'
     )
-    # File fields for uploads
-    license_document = models.FileField(upload_to='documents/', blank=True, null=True)
-    selfie = models.ImageField(upload_to='images/', blank=True, null=True)
 
     def __str__(self):
         return f"Driver Profile for {self.user.email}"
+
 
 class Vehicle(models.Model):
     driver_profile = models.OneToOneField(DriverProfile, on_delete=models.CASCADE, related_name='vehicle')
@@ -89,12 +94,37 @@ class Vehicle(models.Model):
     manufacturer = models.CharField(max_length=100, blank=True, null=True)
     color = models.CharField(max_length=50, blank=True, null=True)
     plate_number = models.CharField(max_length=20, blank=True, null=True)
-    # File fields for vehicle documents and images
-    road_worthiness = models.FileField(upload_to='documents/', blank=True, null=True)
-    insurance_certificate = models.FileField(upload_to='documents/', blank=True, null=True)
-    front_image = models.ImageField(upload_to='images/', blank=True, null=True)
-    back_image = models.ImageField(upload_to='images/', blank=True, null=True)
-    inside_image = models.ImageField(upload_to='images/', blank=True, null=True)
 
     def __str__(self):
         return f"Vehicle for {self.driver_profile.user.email}"
+
+
+class DriverDocument(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='driver_documents'
+    )
+    document_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('license_document', 'License Document'),
+            ('selfie', 'Selfie'),
+            ('road_worthiness', 'Road Worthiness'),
+            ('insurance_certificate', 'Insurance Certificate'),
+            ('front_image', 'Front Image'),
+            ('back_image', 'Back Image'),
+            ('inside_image', 'Inside Image'),
+        ]
+    )
+    file = models.FileField(upload_to='driver_documents/%Y/%m/%d/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    expiry_date = models.DateField(blank=True, null=True)  # For license/insurance
+
+    class Meta:
+        verbose_name = 'Driver Document'
+        verbose_name_plural = 'Driver Documents'
+        unique_together = ('user', 'document_type')  # Ensures one file per type per user
+
+    def __str__(self):
+        return f"{self.document_type} for {self.user.email}"

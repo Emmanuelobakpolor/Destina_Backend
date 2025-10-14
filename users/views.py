@@ -6,7 +6,7 @@ from .serializers import SignupSerializer, VerifyDriverSignupWithFilesSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode
+from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument
 import requests
 from django.conf import settings
 from django.utils import timezone
@@ -193,16 +193,13 @@ class VerifyLoginView(APIView):
 
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
-        # CORRECT WAY: Combine request.data and request.FILES
         serializer = VerifyDriverSignupWithFilesSerializer(data=request.data)
-
         if serializer.is_valid():
-            print("Validated data:", serializer.validated_data)  # Debug logging
-            
+            print("Validated data:", serializer.validated_data)
             email = serializer.validated_data['email']
             code = serializer.validated_data['code']
             role = serializer.validated_data['role']
-            
+
             try:
                 verification = VerificationCode.objects.get(email=email, type='signup')
             except VerificationCode.DoesNotExist:
@@ -213,72 +210,57 @@ class VerifyDriverSignupWithFilesView(APIView):
                 return Response({"error": "Verification code expired"}, status=status.HTTP_400_BAD_REQUEST)
 
             if verification.code == code and verification.data.get('role') == role:
-                # Create or get user
                 user, created = User.objects.get_or_create(
-                    email=email, 
+                    email=email,
                     defaults={'role': role}
                 )
                 if not created and user.role != role:
                     return Response({"error": "Role mismatch"}, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Update user with phone number
+
                 if serializer.validated_data.get('phone_number'):
                     user.phone_number = serializer.validated_data['phone_number']
                 user.save()
 
-                # Create/update driver profile
                 profile, created = DriverProfile.objects.get_or_create(user=user)
                 profile.verification_status = 'pending'
-                
-                # Update profile fields
                 profile_fields = [
-                    'first_name', 'last_name', 'license_number', 'license_expiry', 
+                    'first_name', 'last_name', 'license_number', 'license_expiry',
                     'city', 'service_type', 'referral_code'
                 ]
                 for field in profile_fields:
                     if serializer.validated_data.get(field):
                         setattr(profile, field, serializer.validated_data[field])
-                
-                # Handle file URLs for profile (no memory usage)
-                if serializer.validated_data.get('license_document_url'):
-                    profile.license_document = serializer.validated_data['license_document_url']
-                if serializer.validated_data.get('selfie_url'):
-                    profile.selfie = serializer.validated_data['selfie_url']
-
                 profile.save()
                 print(f"Profile saved: {profile.first_name} {profile.last_name}")
-                print(f"Profile URLs - License: {profile.license_document}, Selfie: {profile.selfie}")
 
-                # Create/update vehicle
                 vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
-
-                # Update vehicle fields
                 vehicle_fields = ['brand', 'year', 'manufacturer', 'color', 'plate_number']
                 for field in vehicle_fields:
                     if serializer.validated_data.get(field):
                         setattr(vehicle, field, serializer.validated_data[field])
-
-                # Handle file URLs for vehicle (no memory usage)
-                vehicle_urls = [
-                    'road_worthiness_url', 'insurance_certificate_url',
-                    'front_image_url', 'back_image_url', 'inside_image_url'
-                ]
-                for url_field in vehicle_urls:
-                    if serializer.validated_data.get(url_field):
-                        # Remove '_url' suffix to get the model field name
-                        model_field = url_field[:-4]  # e.g., 'road_worthiness_url' -> 'road_worthiness'
-                        setattr(vehicle, model_field, serializer.validated_data[url_field])
-
                 vehicle.save()
                 print(f"Vehicle saved: {vehicle.brand} {vehicle.plate_number}")
-                print(f"Vehicle URLs - Road Worthiness: {vehicle.road_worthiness}, Insurance: {vehicle.insurance_certificate}")
 
-                # Clean up verification code
+                file_fields = [
+                    ('license_document', serializer.validated_data.get('license_document'), serializer.validated_data.get('license_expiry')),
+                    ('selfie', serializer.validated_data.get('selfie'), None),
+                    ('road_worthiness', serializer.validated_data.get('road_worthiness'), None),
+                    ('insurance_certificate', serializer.validated_data.get('insurance_certificate'), None),
+                    ('front_image', serializer.validated_data.get('front_image'), None),
+                    ('back_image', serializer.validated_data.get('back_image'), None),
+                    ('inside_image', serializer.validated_data.get('inside_image'), None),
+                ]
+                for doc_type, file, expiry in file_fields:
+                    if file:
+                        DriverDocument.objects.update_or_create(
+                            user=user,
+                            document_type=doc_type,
+                            defaults={'file': file, 'expiry_date': expiry}
+                        )
+                        print(f"Saved {doc_type} for {user.email}")
+
                 verification.delete()
-                
-                # Generate tokens
                 refresh = RefreshToken.for_user(user)
-                
                 return Response({
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
@@ -290,37 +272,38 @@ class VerifyDriverSignupWithFilesView(APIView):
                     },
                     "message": "Driver signup completed successfully"
                 }, status=status.HTTP_200_OK)
-            
+
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        print("Serializer errors:", serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-class ResendOTPView(APIView):
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)  # Reuse for email
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            type = request.data.get('type', 'signup')  # default to signup
-            # Map driver-signup to signup since they use the same verification type
-            if type == 'driver-signup':
-                type = 'signup'
-            if type not in ['signup', 'login']:
-                return Response({"error": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                verification = VerificationCode.objects.get(email=email, type=type)
-            except VerificationCode.DoesNotExist:
-                return Response({"error": "Verification code not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-            if verification.is_expired():
-                verification.delete()
-                return Response({"error": "Verification code expired"}, status=status.HTTP_400_BAD_REQUEST)
-
-            success, error_msg = send_email(email, f"Your verification code is {verification.code}")
-            if not success:
-                return Response({"error": f"Failed to resend email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            return Response({"message": "Verification code resent"}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            print("Serializer errors:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    class ResendOTPView(APIView):
+        def post(self, request):
+            serializer = LoginSerializer(data=request.data)  # Reuse for email
+            if serializer.is_valid():
+                email = serializer.validated_data['email']
+                type = request.data.get('type', 'signup')  # default to signup
+                # Map driver-signup to signup since they use the same verification type
+                if type == 'driver-signup':
+                    type = 'signup'
+                if type not in ['signup', 'login']:
+                    return Response({"error": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+    
+                try:
+                    verification = VerificationCode.objects.get(email=email, type=type)
+                except VerificationCode.DoesNotExist:
+                    return Response({"error": "Verification code not found"}, status=status.HTTP_400_BAD_REQUEST)
+    
+                if verification.is_expired():
+                    verification.delete()
+                    return Response({"error": "Verification code expired"}, status=status.HTTP_400_BAD_REQUEST)
+    
+                success, error_msg = send_email(email, f"Your verification code is {verification.code}")
+                if not success:
+                    return Response({"error": f"Failed to resend email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"message": "Verification code resent"}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UpdateDriverProfileView(APIView):
     permission_classes = [IsAuthenticated]
