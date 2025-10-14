@@ -198,7 +198,9 @@ class VerifyDriverSignupWithFilesView(APIView):
 
         if serializer.is_valid():
             print("Validated data:", serializer.validated_data)  # Debug logging
-            
+            print("Raw request data keys:", list(request.data.keys()))  # Debug logging
+            print("Raw request data:", dict(request.data))  # Debug logging
+
             email = serializer.validated_data['email']
             code = serializer.validated_data['code']
             role = serializer.validated_data['role']
