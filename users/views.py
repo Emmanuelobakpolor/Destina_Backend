@@ -6,7 +6,7 @@ from .serializers import SignupSerializer, VerifyDriverSignupWithFilesSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode
+from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument
 import requests
 from django.conf import settings
 from django.utils import timezone
