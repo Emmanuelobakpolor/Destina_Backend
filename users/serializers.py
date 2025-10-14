@@ -37,10 +37,12 @@ class VerifyLoginSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
 
 class DocumentSerializer(serializers.ModelSerializer):
+    user_email = serializers.CharField(source='user.email', read_only=True)
+
     class Meta:
         model = Document
-        fields = ['id', 'user', 'file_url', 'file_type', 'uploaded_at']
-        read_only_fields = ['user', 'uploaded_at']
+        fields = ['user_email', 'file_url', 'file_type', 'uploaded_at']
+        read_only_fields = ['user_email', 'uploaded_at']
 
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:

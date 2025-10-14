@@ -429,3 +429,13 @@ class DriverVerificationStatusView(APIView):
             return Response({"message": "Verification status updated"}, status=status.HTTP_200_OK)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class DocumentListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        documents = Document.objects.filter(user=user)
+        serializer = DocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
