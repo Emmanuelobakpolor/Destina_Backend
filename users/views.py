@@ -239,37 +239,39 @@ class VerifyDriverSignupWithFilesView(APIView):
                     if serializer.validated_data.get(field):
                         setattr(profile, field, serializer.validated_data[field])
                 
-                # Handle file uploads for profile
-                if serializer.validated_data.get('license_document'):
-                    profile.license_document = serializer.validated_data['license_document']
-                if serializer.validated_data.get('selfie'):
-                    profile.selfie = serializer.validated_data['selfie']
-                
+                # Handle file URLs for profile (no memory usage)
+                if serializer.validated_data.get('license_document_url'):
+                    profile.license_document = serializer.validated_data['license_document_url']
+                if serializer.validated_data.get('selfie_url'):
+                    profile.selfie = serializer.validated_data['selfie_url']
+
                 profile.save()
                 print(f"Profile saved: {profile.first_name} {profile.last_name}")
-                print(f"Profile files - License: {profile.license_document}, Selfie: {profile.selfie}")
+                print(f"Profile URLs - License: {profile.license_document}, Selfie: {profile.selfie}")
 
                 # Create/update vehicle
                 vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
-                
+
                 # Update vehicle fields
                 vehicle_fields = ['brand', 'year', 'manufacturer', 'color', 'plate_number']
                 for field in vehicle_fields:
                     if serializer.validated_data.get(field):
                         setattr(vehicle, field, serializer.validated_data[field])
-                
-                # Handle file uploads for vehicle
-                vehicle_files = [
-                    'road_worthiness', 'insurance_certificate', 
-                    'front_image', 'back_image', 'inside_image'
+
+                # Handle file URLs for vehicle (no memory usage)
+                vehicle_urls = [
+                    'road_worthiness_url', 'insurance_certificate_url',
+                    'front_image_url', 'back_image_url', 'inside_image_url'
                 ]
-                for file_field in vehicle_files:
-                    if serializer.validated_data.get(file_field):
-                        setattr(vehicle, file_field, serializer.validated_data[file_field])
-                
+                for url_field in vehicle_urls:
+                    if serializer.validated_data.get(url_field):
+                        # Remove '_url' suffix to get the model field name
+                        model_field = url_field[:-4]  # e.g., 'road_worthiness_url' -> 'road_worthiness'
+                        setattr(vehicle, model_field, serializer.validated_data[url_field])
+
                 vehicle.save()
                 print(f"Vehicle saved: {vehicle.brand} {vehicle.plate_number}")
-                print(f"Vehicle files - Road Worthiness: {vehicle.road_worthiness}, Insurance: {vehicle.insurance_certificate}")
+                print(f"Vehicle URLs - Road Worthiness: {vehicle.road_worthiness}, Insurance: {vehicle.insurance_certificate}")
 
                 # Clean up verification code
                 verification.delete()

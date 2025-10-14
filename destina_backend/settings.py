@@ -137,6 +137,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# File upload memory limits to prevent worker timeouts
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB per file
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB total request body
+
 # Supabase Storage Configuration
 SUPABASE_URL = config('SUPABASE_URL', default='https://konnghriofsljkgodboj.supabase.co')
 SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvbm5naHJpb2ZzbGprZ29kYm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDIwNjEsImV4cCI6MjA3NTc3ODA2MX0.TLRLe7abZu0nAcMrX5vdsHe4V3HSkYDZxaWB1sPt2zk')

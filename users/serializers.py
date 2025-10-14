@@ -87,7 +87,7 @@ class VerifyDriverSignupWithFilesSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
     role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
-    
+
     # Personal Information
     first_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
     last_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
@@ -95,28 +95,26 @@ class VerifyDriverSignupWithFilesSerializer(serializers.Serializer):
     license_expiry = serializers.DateField(required=False)
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
     referral_code = serializers.CharField(max_length=50, required=False, allow_blank=True)
-    
+
     # Service Details
     city = serializers.CharField(max_length=100, required=False, allow_blank=True)
     service_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    
+
     # Vehicle Information
     brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
     year = serializers.IntegerField(required=False)
     manufacturer = serializers.CharField(max_length=100, required=False, allow_blank=True)
     color = serializers.CharField(max_length=50, required=False, allow_blank=True)
     plate_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    
-    # File Uploads - PROFILE
-    license_document = serializers.FileField(required=False)
-    selfie = serializers.ImageField(required=False)
-    
-    # File Uploads - VEHICLE
-    road_worthiness = serializers.FileField(required=False)
-    insurance_certificate = serializers.FileField(required=False)
-    front_image = serializers.ImageField(required=False)
-    back_image = serializers.ImageField(required=False)
-    inside_image = serializers.ImageField(required=False)
+
+    # File URLs instead of raw files - eliminates memory issues
+    license_document_url = serializers.URLField(required=False, allow_blank=True)
+    selfie_url = serializers.URLField(required=False, allow_blank=True)
+    road_worthiness_url = serializers.URLField(required=False, allow_blank=True)
+    insurance_certificate_url = serializers.URLField(required=False, allow_blank=True)
+    front_image_url = serializers.URLField(required=False, allow_blank=True)
+    back_image_url = serializers.URLField(required=False, allow_blank=True)
+    inside_image_url = serializers.URLField(required=False, allow_blank=True)
 
     def validate(self, data):
         # Add any custom validation if needed
