@@ -6,7 +6,7 @@ from .serializers import SignupSerializer, VerifyDriverSignupWithFilesSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument
+from .models import DriverProfile, Vehicle, VerificationCode
 import requests
 from django.conf import settings
 from django.utils import timezone
@@ -275,35 +275,34 @@ class VerifyDriverSignupWithFilesView(APIView):
 
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
 
-            print("Serializer errors:", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    class ResendOTPView(APIView):
-        def post(self, request):
-            serializer = LoginSerializer(data=request.data)  # Reuse for email
-            if serializer.is_valid():
-                email = serializer.validated_data['email']
-                type = request.data.get('type', 'signup')  # default to signup
-                # Map driver-signup to signup since they use the same verification type
-                if type == 'driver-signup':
-                    type = 'signup'
-                if type not in ['signup', 'login']:
-                    return Response({"error": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
-    
-                try:
-                    verification = VerificationCode.objects.get(email=email, type=type)
-                except VerificationCode.DoesNotExist:
-                    return Response({"error": "Verification code not found"}, status=status.HTTP_400_BAD_REQUEST)
-    
-                if verification.is_expired():
-                    verification.delete()
-                    return Response({"error": "Verification code expired"}, status=status.HTTP_400_BAD_REQUEST)
-    
-                success, error_msg = send_email(email, f"Your verification code is {verification.code}")
-                if not success:
-                    return Response({"error": f"Failed to resend email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                return Response({"message": "Verification code resent"}, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print("Serializer errors:", serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class ResendOTPView(APIView):
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)  # Reuse for email
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            type = request.data.get('type', 'signup')  # default to signup
+            # Map driver-signup to signup since they use the same verification type
+            if type == 'driver-signup':
+                type = 'signup'
+            if type not in ['signup', 'login']:
+                return Response({"error": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                verification = VerificationCode.objects.get(email=email, type=type)
+            except VerificationCode.DoesNotExist:
+                return Response({"error": "Verification code not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if verification.is_expired():
+                verification.delete()
+                return Response({"error": "Verification code expired"}, status=status.HTTP_400_BAD_REQUEST)
+
+            success, error_msg = send_email(email, f"Your verification code is {verification.code}")
+            if not success:
+                return Response({"error": f"Failed to resend email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"message": "Verification code resent"}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UpdateDriverProfileView(APIView):
     permission_classes = [IsAuthenticated]
