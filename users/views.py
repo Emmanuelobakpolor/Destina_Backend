@@ -275,8 +275,7 @@ class VerifyDriverSignupWithFilesView(APIView):
 
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print("Serializer errors:", serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class ResendOTPView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)  # Reuse for email

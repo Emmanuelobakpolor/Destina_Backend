@@ -89,11 +89,14 @@ WSGI_APPLICATION = 'destina_backend.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True  # <-- Important
+        conn_max_age=600,      # keeps connection open for up to 10 minutes
+        ssl_require=True       # required for Supabase
     )
 }
 
+DATABASES['default']['OPTIONS'] = {
+    'connect_timeout': 10,    # 10 seconds connection timeout
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
