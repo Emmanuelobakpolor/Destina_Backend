@@ -61,21 +61,6 @@ class VerificationCode(models.Model):
     class Meta:
         unique_together = ('email', 'type')
 
-class Document(models.Model):
-    FILE_TYPE_CHOICES = (
-        ('image', 'Image'),
-        ('pdf', 'PDF'),
-        ('other', 'Other'),
-    )
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
-    file_url = models.URLField()  # Supabase file URL
-    file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.email} - {self.file_type}"
-
 class DriverProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='driver_profile')
     city = models.CharField(max_length=100, blank=True, null=True)
@@ -90,9 +75,9 @@ class DriverProfile(models.Model):
         choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')],
         default='pending'
     )
-    # File fields changed to URL fields for Supabase
-    license_document = models.URLField(blank=True, null=True)
-    selfie = models.URLField(blank=True, null=True)
+    # File fields for uploads
+    license_document = models.FileField(upload_to='documents/', blank=True, null=True)
+    selfie = models.ImageField(upload_to='images/', blank=True, null=True)
 
     def __str__(self):
         return f"Driver Profile for {self.user.email}"
@@ -104,12 +89,12 @@ class Vehicle(models.Model):
     manufacturer = models.CharField(max_length=100, blank=True, null=True)
     color = models.CharField(max_length=50, blank=True, null=True)
     plate_number = models.CharField(max_length=20, blank=True, null=True)
-    # File fields changed to URL fields for Supabase
-    road_worthiness = models.URLField(blank=True, null=True)
-    insurance_certificate = models.URLField(blank=True, null=True)
-    front_image = models.URLField(blank=True, null=True)
-    back_image = models.URLField(blank=True, null=True)
-    inside_image = models.URLField(blank=True, null=True)
+    # File fields for vehicle documents and images
+    road_worthiness = models.FileField(upload_to='documents/', blank=True, null=True)
+    insurance_certificate = models.FileField(upload_to='documents/', blank=True, null=True)
+    front_image = models.ImageField(upload_to='images/', blank=True, null=True)
+    back_image = models.ImageField(upload_to='images/', blank=True, null=True)
+    inside_image = models.ImageField(upload_to='images/', blank=True, null=True)
 
     def __str__(self):
         return f"Vehicle for {self.driver_profile.user.email}"

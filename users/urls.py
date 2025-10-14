@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, DriverVerificationStatusView, DocumentListView
+from .views import InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, DriverVerificationStatusView
 
 urlpatterns = [
     path('initiate-signup/', InitiateSignupView.as_view(), name='initiate-signup'),
@@ -12,5 +12,4 @@ urlpatterns = [
     path('update-vehicle/', UpdateVehicleView.as_view(), name='update-vehicle'),
     path('update-user-profile/', UpdateUserProfileView.as_view(), name='update-user-profile'),
     path('driver-verification-status/', DriverVerificationStatusView.as_view(), name='driver-verification-status'),
-    path('documents/', DocumentListView.as_view(), name='document-list'),
 ]
