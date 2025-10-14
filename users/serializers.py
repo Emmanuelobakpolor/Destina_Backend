@@ -39,19 +39,14 @@ class VerifyLoginSerializer(serializers.Serializer):
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverProfile
-        fields = ['id', 'user', 'city', 'service_type', 'first_name', 'last_name', 'license_number', 'license_expiry', 'referral_code', 'verification_status', 'license_document', 'selfie']
+        fields = ['id', 'user', 'city', 'service_type', 'first_name', 'last_name', 'license_number', 'license_expiry', 'referral_code', 'verification_status']
         read_only_fields = ['user']
 
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ['id', 'driver_profile', 'brand', 'year', 'manufacturer', 'color', 'plate_number', 'road_worthiness', 'insurance_certificate', 'front_image', 'back_image', 'inside_image']
+        fields = ['id', 'driver_profile', 'brand', 'year', 'manufacturer', 'color', 'plate_number']
         read_only_fields = ['driver_profile']
-
-# REMOVE THESE DUPLICATE/UNNECESSARY SERIALIZERS:
-# - DriverSignupSerializer (duplicate functionality)
-# - InitiateDriverSignupWithFilesSerializer (we're removing the initiate endpoint)
-# - VerifyDriverSignupSerializer (we're using VerifyDriverSignupWithFilesSerializer instead)
 
 class DriverProfileUpdateSerializer(serializers.Serializer):
     city = serializers.CharField(max_length=100)

@@ -24,6 +24,6 @@ urlpatterns = [
     path('api/users/auth/', include('users.urls')),
 ]
 
-# Serve media files during development
+# Serve media files from MEDIA_ROOT during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

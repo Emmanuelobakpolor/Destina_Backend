@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
-    'storages',
 
     # Local apps
     'users',
@@ -89,8 +88,8 @@ WSGI_APPLICATION = 'destina_backend.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL'),
-        conn_max_age=600,      # keeps connection open for up to 10 minutes
-        ssl_require=True       # required for Supabase
+        conn_max_age=600,      # Keeps connection open for up to 10 minutes
+        ssl_require=True       # Enforce SSL for security (required by most cloud providers)
     )
 }
 
@@ -144,18 +143,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB per file
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB total request body
 
-# Supabase Storage Configuration
-SUPABASE_URL = config('SUPABASE_URL', default='https://konnghriofsljkgodboj.supabase.co')
-SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvbm5naHJpb2ZzbGprZ29kYm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDIwNjEsImV4cCI6MjA3NTc3ODA2MX0.TLRLe7abZu0nAcMrX5vdsHe4V3HSkYDZxaWB1sPt2zk')
-SUPABASE_SERVICE_ROLE_KEY = config('SUPABASE_SERVICE_ROLE_KEY', default='')
-SUPABASE_BUCKET_NAME = config('SUPABASE_BUCKET_NAME', default='destina-media')
-
-# Use custom Supabase storage for all environments
-DEFAULT_FILE_STORAGE = 'users.storage.SupabaseStorage'
-MEDIA_URL = f'https://{SUPABASE_URL.replace("https://", "")}.supabase.co/storage/v1/object/public/{SUPABASE_BUCKET_NAME}/'
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+
+# Default file storage - uses local filesystem. Perfect for Render's persistent disks.
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
