@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, DriverProfile, Vehicle
+from .models import User, DriverProfile, Vehicle, Document
 
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
@@ -36,6 +36,12 @@ class VerifyLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
 
+class DocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = ['id', 'user', 'file_url', 'file_type', 'uploaded_at']
+        read_only_fields = ['user', 'uploaded_at']
+
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverProfile
@@ -61,8 +67,8 @@ class DriverProfileUpdateSerializer(serializers.Serializer):
     license_number = serializers.CharField(max_length=50)
     license_expiry = serializers.DateField()
     referral_code = serializers.CharField(max_length=50, required=False, allow_blank=True)
-    license_document = serializers.FileField(required=False)
-    selfie = serializers.ImageField(required=False)
+    license_document = serializers.URLField(required=False)
+    selfie = serializers.URLField(required=False)
 
 class VehicleUpdateSerializer(serializers.Serializer):
     brand = serializers.CharField(max_length=100)
@@ -70,11 +76,11 @@ class VehicleUpdateSerializer(serializers.Serializer):
     manufacturer = serializers.CharField(max_length=100)
     color = serializers.CharField(max_length=50)
     plate_number = serializers.CharField(max_length=20)
-    road_worthiness = serializers.FileField(required=False)
-    insurance_certificate = serializers.FileField(required=False)
-    front_image = serializers.ImageField(required=False)
-    back_image = serializers.ImageField(required=False)
-    inside_image = serializers.ImageField(required=False)
+    road_worthiness = serializers.URLField(required=False)
+    insurance_certificate = serializers.URLField(required=False)
+    front_image = serializers.URLField(required=False)
+    back_image = serializers.URLField(required=False)
+    inside_image = serializers.URLField(required=False)
 
 class UserProfileUpdateSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=255, required=False, allow_blank=True)

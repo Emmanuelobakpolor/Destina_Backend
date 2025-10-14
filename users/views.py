@@ -2,11 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer
+from .serializers import SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, DocumentSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode
+from .models import DriverProfile, Vehicle, VerificationCode, Document
 import requests
 from django.conf import settings
 from django.utils import timezone
@@ -242,8 +242,20 @@ class VerifyDriverSignupWithFilesView(APIView):
                 # Handle file URLs for profile (no memory usage)
                 if serializer.validated_data.get('license_document_url'):
                     profile.license_document = serializer.validated_data['license_document_url']
+                    # Also save to Document model for tracking
+                    Document.objects.create(
+                        user=user,
+                        file_url=serializer.validated_data['license_document_url'],
+                        file_type='pdf'  # Assuming license is PDF
+                    )
                 if serializer.validated_data.get('selfie_url'):
                     profile.selfie = serializer.validated_data['selfie_url']
+                    # Also save to Document model for tracking
+                    Document.objects.create(
+                        user=user,
+                        file_url=serializer.validated_data['selfie_url'],
+                        file_type='image'
+                    )
 
                 profile.save()
                 print(f"Profile saved: {profile.first_name} {profile.last_name}")
@@ -260,14 +272,20 @@ class VerifyDriverSignupWithFilesView(APIView):
 
                 # Handle file URLs for vehicle (no memory usage)
                 vehicle_urls = [
-                    'road_worthiness_url', 'insurance_certificate_url',
-                    'front_image_url', 'back_image_url', 'inside_image_url'
+                    ('road_worthiness_url', 'pdf'), ('insurance_certificate_url', 'pdf'),
+                    ('front_image_url', 'image'), ('back_image_url', 'image'), ('inside_image_url', 'image')
                 ]
-                for url_field in vehicle_urls:
+                for url_field, file_type in vehicle_urls:
                     if serializer.validated_data.get(url_field):
                         # Remove '_url' suffix to get the model field name
                         model_field = url_field[:-4]  # e.g., 'road_worthiness_url' -> 'road_worthiness'
                         setattr(vehicle, model_field, serializer.validated_data[url_field])
+                        # Also save to Document model for tracking
+                        Document.objects.create(
+                            user=user,
+                            file_url=serializer.validated_data[url_field],
+                            file_type=file_type
+                        )
 
                 vehicle.save()
                 print(f"Vehicle saved: {vehicle.brand} {vehicle.plate_number}")
