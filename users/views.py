@@ -11,6 +11,11 @@ import requests
 from django.conf import settings
 from django.utils import timezone
 from datetime import date
+from django.core.files.storage import default_storage
+from users.models import User, VerificationCode, DriverProfile, Vehicle, Document
+from users.serializers import VerifyDriverSignupWithFilesSerializer
+
+
 
 User = get_user_model()
 
@@ -193,18 +198,18 @@ class VerifyLoginView(APIView):
 
 class VerifyDriverSignupWithFilesView(APIView):
     def post(self, request):
-        # CORRECT WAY: Combine request.data and request.FILES
         serializer = VerifyDriverSignupWithFilesSerializer(data=request.data)
 
         if serializer.is_valid():
-            print("Validated data:", serializer.validated_data)  # Debug logging
-            print("Raw request data keys:", list(request.data.keys()))  # Debug logging
-            print("Raw request data:", dict(request.data))  # Debug logging
+            print("Validated data:", serializer.validated_data)
+            print("Raw request data keys:", list(request.data.keys()))
+            print("Raw request data:", dict(request.data))
 
             email = serializer.validated_data['email']
             code = serializer.validated_data['code']
             role = serializer.validated_data['role']
             
+            # Check verification code
             try:
                 verification = VerificationCode.objects.get(email=email, type='signup')
             except VerificationCode.DoesNotExist:
@@ -214,107 +219,113 @@ class VerifyDriverSignupWithFilesView(APIView):
                 verification.delete()
                 return Response({"error": "Verification code expired"}, status=status.HTTP_400_BAD_REQUEST)
 
-            if verification.code == code and verification.data.get('role') == role:
-                # Create or get user
-                user, created = User.objects.get_or_create(
-                    email=email, 
-                    defaults={'role': role}
-                )
-                if not created and user.role != role:
-                    return Response({"error": "Role mismatch"}, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Update user with phone number
-                if serializer.validated_data.get('phone_number'):
-                    user.phone_number = serializer.validated_data['phone_number']
-                user.save()
+            if verification.code != code or verification.data.get('role') != role:
+                return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Create/update driver profile
-                profile, created = DriverProfile.objects.get_or_create(user=user)
-                profile.verification_status = 'pending'
-                
-                # Update profile fields
-                profile_fields = [
-                    'first_name', 'last_name', 'license_number', 'license_expiry', 
-                    'city', 'service_type', 'referral_code'
-                ]
-                for field in profile_fields:
-                    if serializer.validated_data.get(field):
-                        setattr(profile, field, serializer.validated_data[field])
-                
-                # Handle file URLs for profile (no memory usage)
-                if serializer.validated_data.get('license_document_url'):
-                    profile.license_document = serializer.validated_data['license_document_url']
-                    # Also save to Document model for tracking
+            # Create or get user
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={'role': role}
+            )
+            if not created and user.role != role:
+                return Response({"error": "Role mismatch"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update phone number if provided
+            if serializer.validated_data.get('phone_number'):
+                user.phone_number = serializer.validated_data['phone_number']
+            user.save()
+
+            # Create or update driver profile
+            profile, created = DriverProfile.objects.get_or_create(user=user)
+            profile.verification_status = 'pending'
+
+            # Update profile text fields
+            profile_fields = [
+                'first_name', 'last_name', 'license_number', 'license_expiry',
+                'city', 'service_type', 'referral_code'
+            ]
+            for field in profile_fields:
+                if serializer.validated_data.get(field):
+                    setattr(profile, field, serializer.validated_data[field])
+
+            # Handle profile file uploads
+            profile_file_mapping = {
+                'license_document': 'license_document',
+                'selfie': 'selfie'
+            }
+            for field, model_field in profile_file_mapping.items():
+                uploaded_file = request.FILES.get(field)
+                if uploaded_file:
+                    file_path = f"drivers/{user.id}/{field}_{uploaded_file.name}"
+                    saved_name = default_storage.save(file_path, uploaded_file)
+                    file_url = default_storage.url(saved_name)
+                    setattr(profile, model_field, file_url)
                     Document.objects.create(
                         user=user,
-                        file_url=serializer.validated_data['license_document_url'],
-                        file_type='pdf'  # Assuming license is PDF
+                        file_url=file_url,
+                        file_type='image' if 'image' in uploaded_file.content_type else 'pdf'
                     )
-                if serializer.validated_data.get('selfie_url'):
-                    profile.selfie = serializer.validated_data['selfie_url']
-                    # Also save to Document model for tracking
+
+            profile.save()
+            print(f"Profile saved: {profile.first_name} {profile.last_name}")
+            print(f"Profile URLs - License: {profile.license_document}, Selfie: {profile.selfie}")
+
+            # Create or update vehicle
+            vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
+
+            # Update vehicle text fields
+            vehicle_fields = ['brand', 'year', 'manufacturer', 'color', 'plate_number']
+            for field in vehicle_fields:
+                if serializer.validated_data.get(field):
+                    setattr(vehicle, field, serializer.validated_data[field])
+
+            # Handle vehicle file uploads
+            vehicle_file_mapping = {
+                'road_worthiness': 'road_worthiness',
+                'insurance_certificate': 'insurance_certificate',
+                'front_image': 'front_image',
+                'back_image': 'back_image',
+                'inside_image': 'inside_image'
+            }
+            for field, model_field in vehicle_file_mapping.items():
+                uploaded_file = request.FILES.get(field)
+                if uploaded_file:
+                    file_path = f"vehicles/{user.id}/{field}_{uploaded_file.name}"
+                    saved_name = default_storage.save(file_path, uploaded_file)
+                    file_url = default_storage.url(saved_name)
+                    setattr(vehicle, model_field, file_url)
                     Document.objects.create(
                         user=user,
-                        file_url=serializer.validated_data['selfie_url'],
-                        file_type='image'
+                        file_url=file_url,
+                        file_type='image' if 'image' in uploaded_file.content_type else 'pdf'
                     )
 
-                profile.save()
-                print(f"Profile saved: {profile.first_name} {profile.last_name}")
-                print(f"Profile URLs - License: {profile.license_document}, Selfie: {profile.selfie}")
+            vehicle.save()
+            print(f"Vehicle saved: {vehicle.brand} {vehicle.plate_number}")
+            print(f"Vehicle URLs - Road Worthiness: {vehicle.road_worthiness}, Insurance: {vehicle.insurance_certificate}")
 
-                # Create/update vehicle
-                vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
+            # Delete verification code
+            verification.delete()
 
-                # Update vehicle fields
-                vehicle_fields = ['brand', 'year', 'manufacturer', 'color', 'plate_number']
-                for field in vehicle_fields:
-                    if serializer.validated_data.get(field):
-                        setattr(vehicle, field, serializer.validated_data[field])
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
 
-                # Handle file URLs for vehicle (no memory usage)
-                vehicle_urls = [
-                    ('road_worthiness_url', 'pdf'), ('insurance_certificate_url', 'pdf'),
-                    ('front_image_url', 'image'), ('back_image_url', 'image'), ('inside_image_url', 'image')
-                ]
-                for url_field, file_type in vehicle_urls:
-                    if serializer.validated_data.get(url_field):
-                        # Remove '_url' suffix to get the model field name
-                        model_field = url_field[:-4]  # e.g., 'road_worthiness_url' -> 'road_worthiness'
-                        setattr(vehicle, model_field, serializer.validated_data[url_field])
-                        # Also save to Document model for tracking
-                        Document.objects.create(
-                            user=user,
-                            file_url=serializer.validated_data[url_field],
-                            file_type=file_type
-                        )
+            return Response({
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": {
+                    "first_name": profile.first_name or 'Driver',
+                    "email": user.email,
+                    "role": user.role,
+                    "verification_status": profile.verification_status
+                },
+                "message": "Driver signup completed successfully"
+            }, status=status.HTTP_200_OK)
 
-                vehicle.save()
-                print(f"Vehicle saved: {vehicle.brand} {vehicle.plate_number}")
-                print(f"Vehicle URLs - Road Worthiness: {vehicle.road_worthiness}, Insurance: {vehicle.insurance_certificate}")
-
-                # Clean up verification code
-                verification.delete()
-                
-                # Generate tokens
-                refresh = RefreshToken.for_user(user)
-                
-                return Response({
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                    "user": {
-                        "first_name": profile.first_name or 'Driver',
-                        "email": user.email,
-                        "role": user.role,
-                        "verification_status": profile.verification_status
-                    },
-                    "message": "Driver signup completed successfully"
-                }, status=status.HTTP_200_OK)
-            
-            return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
-        
         print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 class ResendOTPView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)  # Reuse for email
