@@ -179,11 +179,21 @@ class VerifyLoginView(APIView):
                     if user.role == 'driver':
                         try:
                             profile = user.driver_profile
+                            # Find the selfie document
+                            selfie_doc = DriverDocument.objects.filter(user=user, document_type='selfie').first()
+                            selfie_url = None
+                            if selfie_doc and hasattr(selfie_doc.file, 'url'):
+                                # Construct absolute URL if it's not already
+                                request_obj = self.request
+                                selfie_url = request_obj.build_absolute_uri(selfie_doc.file.url)
+
                             response_data["user"]["verification_status"] = profile.verification_status
                             response_data["user"]["first_name"] = profile.first_name
+                            response_data["user"]["selfie_url"] = selfie_url
                         except DriverProfile.DoesNotExist: # Handle case where profile doesn't exist yet
                             response_data["user"]["verification_status"] = 'pending' # Assume pending if no profile
                             response_data["user"]["first_name"] = 'Driver' # Default name
+                            response_data["user"]["selfie_url"] = None
                     return Response(response_data, status=status.HTTP_200_OK)
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
