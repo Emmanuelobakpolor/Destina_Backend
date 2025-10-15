@@ -14,6 +14,9 @@ from pathlib import Path
 import os
 from decouple import config
 import dj_database_url
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,6 +48,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
+    'cloudinary_storage',
+    'cloudinary',
 
     # Local apps
     'users',
@@ -134,8 +139,8 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (User uploaded files)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_URL = '/media/'  # Commented out for Cloudinary
+# MEDIA_ROOT = BASE_DIR / 'media'  # Commented out for Cloudinary
 
 # File upload memory limits to prevent worker timeouts
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB per file
@@ -144,8 +149,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB total request body
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
-# Default file storage - uses local filesystem. Perfect for Render's persistent disks.
-DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+# Default file storage - now using Cloudinary for persistent storage
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -171,3 +176,12 @@ EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='emmanuelobakpolor6655@gmail.com')
 SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+
+# Cloudinary settings
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),
+}

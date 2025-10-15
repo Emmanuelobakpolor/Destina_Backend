@@ -28,3 +28,4 @@ Pillow
 boto3
 django-storages
 supabase
+django-cloudinary-storage
