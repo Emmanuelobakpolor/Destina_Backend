@@ -99,6 +99,8 @@ class Vehicle(models.Model):
         return f"Vehicle for {self.driver_profile.user.email}"
 
 
+from .storage import CloudinaryStorage
+
 class DriverDocument(models.Model):
     user = models.ForeignKey(
         User,
@@ -117,7 +119,7 @@ class DriverDocument(models.Model):
             ('inside_image', 'Inside Image'),
         ]
     )
-    file = models.FileField(upload_to='driver_documents/%Y/%m/%d/')
+    file = models.FileField(upload_to='driver_documents/%Y/%m/%d/', storage=CloudinaryStorage())
     uploaded_at = models.DateTimeField(auto_now_add=True)
     expiry_date = models.DateField(blank=True, null=True)  # For license/insurance
 
