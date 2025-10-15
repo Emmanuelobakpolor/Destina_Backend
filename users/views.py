@@ -250,17 +250,12 @@ class VerifyDriverSignupWithFilesView(APIView):
                     ('back_image', serializer.validated_data.get('back_image'), None),
                     ('inside_image', serializer.validated_data.get('inside_image'), None),
                 ]
-                from .storage import CloudinaryStorage
-                storage = CloudinaryStorage()
-
                 for doc_type, file, expiry in file_fields:
                     if file:
-                        # Save the file using our custom storage and get the full URL
-                        file_path = storage._save(f"{doc_type}/{file.name}", file)
                         DriverDocument.objects.update_or_create(
                             user=user,
                             document_type=doc_type,
-                            defaults={'file': file_path, 'expiry_date': expiry}
+                            defaults={'file': file, 'expiry_date': expiry}
                         )
                         print(f"Saved {doc_type} for {user.email}")
 

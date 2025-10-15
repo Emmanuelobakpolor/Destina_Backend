@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument
-from .utils import get_image_url
+from .models import User, DriverProfile, Vehicle, VerificationCode
 
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
@@ -113,8 +112,3 @@ class VerifyDriverSignupWithFilesSerializer(serializers.Serializer):
         except VerificationCode.DoesNotExist:
             raise serializers.ValidationError("Invalid verification code")
         return data
-
-class DriverDocumentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DriverDocument
-        fields = ['id', 'document_type', 'file', 'uploaded_at', 'expiry_date']
