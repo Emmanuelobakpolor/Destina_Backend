@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
@@ -390,3 +390,32 @@ class DriverVerificationStatusView(APIView):
             return Response({"message": "Verification status updated"}, status=status.HTTP_200_OK)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class GetAdminDriverDocumentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        user = request.user
+        if user.role != 'admin':
+            return Response({"error": "Only admins can access driver documents"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            documents = DriverDocument.objects.filter(user_id=user_id).select_related('user')
+            serializer = DriverDocumentSerializer(documents, many=True, context={'request': request})
+            return Response({"documents": serializer.data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GetMyDriverDocumentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their own documents"}, status=status.HTTP_403_FORBIDDEN)
+
+        documents = DriverDocument.objects.filter(user=request.user)
+        serializer = DriverDocumentSerializer(documents, many=True, context={'request': request})
+        return Response({"documents": serializer.data}, status=status.HTTP_200_OK)
