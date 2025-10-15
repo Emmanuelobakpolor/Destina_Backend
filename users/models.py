@@ -119,7 +119,9 @@ class DriverDocument(models.Model):
             ('inside_image', 'Inside Image'),
         ]
     )
-    file = models.FileField(upload_to='driver_documents/%Y/%m/%d/', storage=CloudinaryStorage())
+    file = models.TextField()
+    # Note: We use a custom storage backend to handle URL generation
+    # The storage is set in the view when saving files
     uploaded_at = models.DateTimeField(auto_now_add=True)
     expiry_date = models.DateField(blank=True, null=True)  # For license/insurance
 

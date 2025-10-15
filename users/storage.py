@@ -12,3 +12,9 @@ class CloudinaryStorage(FileSystemStorage):
 
         # Return the full Cloudinary URL instead of the relative path
         return get_image_url(saved_name)
+
+    def url(self, name):
+        """
+        Return the full Cloudinary URL for the given name.
+        """
+        return get_image_url(name)
