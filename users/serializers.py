@@ -3,10 +3,17 @@ from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocume
 
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name']
+        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name', 'profile_picture']
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture and hasattr(obj.profile_picture, 'url'):
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
 
     def get_display_name(self, obj):
         if obj.role == 'driver':
@@ -75,6 +82,7 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
     date_of_birth = serializers.DateField(required=False)
+    profile_picture = serializers.ImageField(required=False)
 
 # KEEP ONLY THIS ONE FOR DRIVER SIGNUP - IT HANDLES EVERYTHING:
 class VerifyDriverSignupWithFilesSerializer(serializers.Serializer):

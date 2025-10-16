@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, DriverVerificationStatusView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView
+from .views import InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView
 
 urlpatterns = [
     path('initiate-signup/', InitiateSignupView.as_view(), name='initiate-signup'),
@@ -11,6 +11,7 @@ urlpatterns = [
     path('update-driver-profile/', UpdateDriverProfileView.as_view(), name='update-driver-profile'),
     path('update-vehicle/', UpdateVehicleView.as_view(), name='update-vehicle'),
     path('update-user-profile/', UpdateUserProfileView.as_view(), name='update-user-profile'),
+    path('upload-user-profile-picture/', UploadUserProfilePictureView.as_view(), name='upload-user-profile-picture'),
     path('driver-verification-status/', DriverVerificationStatusView.as_view(), name='driver-verification-status'),
     path('admin-driver-documents/<int:user_id>/', GetAdminDriverDocumentsView.as_view(), name='admin-driver-documents'),
     path('my-documents/', GetMyDriverDocumentsView.as_view(), name='my-documents'),

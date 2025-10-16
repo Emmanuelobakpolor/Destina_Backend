@@ -11,8 +11,46 @@ import requests
 from django.conf import settings
 from django.utils import timezone
 from datetime import date
+import logging
 
 User = get_user_model()
+
+# Set up logger for backend errors
+logger = logging.getLogger(__name__)
+
+# Helper function to create standardized error responses
+def create_error_response(error_type, technical_details=None, status_code=status.HTTP_400_BAD_REQUEST):
+    """
+    Create a standardized error response.
+    Logs technical details for debugging while returning user-friendly messages.
+    """
+    user_friendly_messages = {
+        'email_send_failed': 'Unable to send verification email. Please try again later.',
+        'invalid_email': 'Please enter a valid email address.',
+        'user_not_found': 'No account found with this email address.',
+        'verification_code_expired': 'Verification code has expired. Please request a new one.',
+        'verification_code_not_found': 'Verification code not found. Please request a new one.',
+        'invalid_verification_code': 'Invalid verification code. Please check and try again.',
+        'role_mismatch': 'Account type mismatch. Please check your selection.',
+        'server_error': 'Something went wrong on our end. Please try again later.',
+        'network_error': 'Network connection issue. Please check your internet and try again.',
+        'permission_denied': 'You do not have permission to perform this action.',
+        'profile_not_found': 'Profile information not found.',
+        'invalid_data': 'Please check your input and try again.',
+        'duplicate_entry': 'This information is already registered.',
+        'file_upload_error': 'File upload failed. Please try again.',
+        'unknown_error': 'An unexpected error occurred. Please try again.',
+    }
+
+    user_message = user_friendly_messages.get(error_type, user_friendly_messages['unknown_error'])
+
+    # Log technical details for debugging
+    if technical_details:
+        logger.error(f"Error type: {error_type}, Details: {technical_details}")
+    else:
+        logger.error(f"Error type: {error_type}")
+
+    return Response({"error": user_message}, status=status_code)
 
 def send_email(email, message, retries=3):
     from django.core.mail import send_mail
@@ -27,32 +65,6 @@ def send_email(email, message, retries=3):
                 return False, str(e)  # Failure after retries
 
     return False, "Unknown error"
-
-# def send_sms(phone_number, message, retries=3):
-#     sender = settings.TERMII_SENDER_ID if settings.TERMII_SENDER_ID_STATUS == "APPROVED" else "generic"  # Updated fallback
-
-#     url = "https://v3.api.termii.com/api/sms/send"
-#     payload = {
-#         "to": phone_number,
-#         "from": sender,
-#         "sms": message,
-#         "type": "plain",
-#         "api_key": settings.TERMII_API_KEY,
-#         "channel": "generic"
-#     }
-
-#     for attempt in range(retries):
-#         try:
-#             response = requests.post(url, json=payload)
-#             response.raise_for_status()
-#             return True, None  # Success
-#         except Exception as e:
-#             print(f"SMS sending failed (attempt {attempt + 1}): {response.text if 'response' in locals() else str(e)}")
-#             if attempt == retries - 1:
-#                 return False, str(e)  # Failure after retries
-
-#     return False, "Unknown error"
-
 
 class InitiateSignupView(APIView):
     def post(self, request):
@@ -79,7 +91,7 @@ class InitiateSignupView(APIView):
             success, error_msg = send_email(email, f"Welcome to Destina, use the code {code} to complete verification")
             if not success:
                 VerificationCode.objects.filter(email=email, type='signup').delete()  # Clean up
-                return Response({"error": f"Failed to send email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return create_error_response('email_send_failed', error_msg, status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response({"message": "Verification code sent"}, status=status.HTTP_200_OK)
         print("Serializer errors:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -146,7 +158,7 @@ class LoginView(APIView):
                 success, error_msg = send_email(email, f"Welcome back {email}, your verification code is {code}")
                 if not success:
                     VerificationCode.objects.filter(email=email, type='login').delete()  # Clean up
-                    return Response({"error": f"Failed to send email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return create_error_response('email_send_failed', error_msg, status.HTTP_500_INTERNAL_SERVER_ERROR)
                 return Response({"message": "Login verification code sent"}, status=status.HTTP_200_OK)
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -317,7 +329,7 @@ class ResendOTPView(APIView):
 
         success, error_msg = send_email(email, f"Your verification code is {verification.code}")
         if not success:
-            return Response({"error": f"Failed to resend email: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return create_error_response('email_send_failed', error_msg, status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response({"message": "Verification code resent"}, status=status.HTTP_200_OK)
 
 class UpdateDriverProfileView(APIView):
@@ -372,6 +384,19 @@ class UpdateUserProfileView(APIView):
             user.save()
             return Response({"message": "User profile updated"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UploadUserProfilePictureView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if 'profile_picture' not in request.FILES:
+            return Response({"error": "No profile picture provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile_picture = request.FILES['profile_picture']
+        user.profile_picture = profile_picture
+        user.save()
+        return Response({"message": "Profile picture uploaded successfully"}, status=status.HTTP_200_OK)
 
 class DriverVerificationStatusView(APIView):
     permission_classes = [IsAuthenticated]
