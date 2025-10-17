@@ -216,6 +216,13 @@ class VerifyLoginView(APIView):
                             response_data["user"]["verification_status"] = 'pending' # Assume pending if no profile
                             response_data["user"]["first_name"] = 'Driver' # Default name
                             response_data["user"]["selfie_url"] = None
+
+                    # Add profile picture URL for all users
+                    profile_picture_url = None
+                    if user.profile_picture and hasattr(user.profile_picture, 'url'):
+                        profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+                    response_data["user"]["profile_picture"] = profile_picture_url
+
                     return Response(response_data, status=status.HTTP_200_OK)
                 return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
             return Response({"error": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
