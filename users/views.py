@@ -396,10 +396,15 @@ class UploadUserProfilePictureView(APIView):
         if 'profile_picture' not in request.FILES:
             return Response({"error": "No profile picture provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        profile_picture = request.FILES['profile_picture']
-        user.profile_picture = profile_picture
+        user.profile_picture = request.FILES['profile_picture']
         user.save()
-        return Response({"message": "Profile picture uploaded successfully"}, status=status.HTTP_200_OK)
+
+        # Construct the absolute URL for the newly saved picture
+        profile_picture_url = None
+        if user.profile_picture and hasattr(user.profile_picture, 'url'):
+            profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+
+        return Response({"message": "Profile picture uploaded successfully", "profile_picture": profile_picture_url}, status=status.HTTP_200_OK)
 
 class DriverVerificationStatusView(APIView):
     permission_classes = [IsAuthenticated]
