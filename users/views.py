@@ -72,6 +72,9 @@ class InitiateSignupView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             role = serializer.validated_data['role']
+            # Check if email already exists
+            if User.objects.filter(email=email).exists():
+                return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
             # Generate verification code
             code = str(random.randint(100000, 999999))
             VerificationCode.objects.update_or_create(
