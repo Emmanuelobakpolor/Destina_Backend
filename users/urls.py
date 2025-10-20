@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView
+from .views import InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView
 
 urlpatterns = [
     path('initiate-signup/', InitiateSignupView.as_view(), name='initiate-signup'),
@@ -15,4 +15,5 @@ urlpatterns = [
     path('driver-verification-status/', DriverVerificationStatusView.as_view(), name='driver-verification-status'),
     path('admin-driver-documents/<int:user_id>/', GetAdminDriverDocumentsView.as_view(), name='admin-driver-documents'),
     path('my-documents/', GetMyDriverDocumentsView.as_view(), name='my-documents'),
+    path('user-stats/', UserStatsView.as_view(), name='user-stats'),
 ]

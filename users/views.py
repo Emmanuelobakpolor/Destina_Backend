@@ -476,3 +476,15 @@ class GetMyDriverDocumentsView(APIView):
         documents = DriverDocument.objects.filter(user=request.user)
         serializer = DriverDocumentSerializer(documents, many=True, context={'request': request})
         return Response({"documents": serializer.data}, status=status.HTTP_200_OK)
+
+
+class UserStatsView(APIView):
+    def get(self, request):
+        total_users = User.objects.count()
+        total_drivers = User.objects.filter(role='driver').count()
+        total_regular_users = User.objects.filter(role='user').count()
+        return Response({
+            "total_users": total_users,
+            "total_drivers": total_drivers,
+            "total_regular_users": total_regular_users
+        }, status=status.HTTP_200_OK)
