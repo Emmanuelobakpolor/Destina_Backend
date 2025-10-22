@@ -435,13 +435,13 @@ class DriverVerificationStatusView(APIView):
         if user.role != 'admin':
             return Response({"error": "Only admins can update verification status"}, status=status.HTTP_403_FORBIDDEN)
 
-        driver_id = request.data.get('driver_id')
+        user_id = request.data.get('user_id')
         new_status = request.data.get('status')
-        if not driver_id or new_status not in ['pending', 'approved', 'rejected']:
+        if not user_id or new_status not in ['pending', 'approved', 'rejected']:
             return Response({"error": "Invalid data"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            profile = DriverProfile.objects.get(id=driver_id)
+            profile = DriverProfile.objects.get(user_id=user_id)
             profile.verification_status = new_status
             profile.save()
             return Response({"message": "Verification status updated"}, status=status.HTTP_200_OK)
