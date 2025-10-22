@@ -512,7 +512,10 @@ class GetDriverProfileView(APIView):
         try:
             driver_user = User.objects.get(id=user_id, role='driver')
             profile = driver_user.driver_profile
-            vehicle = profile.vehicle_set.first()  # Assuming one vehicle per profile
+            try:
+                vehicle = profile.vehicle
+            except Vehicle.DoesNotExist:
+                vehicle = None
 
             # Get driver documents
             documents = DriverDocument.objects.filter(user=driver_user)
