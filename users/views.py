@@ -506,3 +506,52 @@ class ListDriversView(APIView):
         drivers = User.objects.filter(role='driver')
         serializer = UserSerializer(drivers, many=True, context={'request': request})
         return Response({"drivers": serializer.data}, status=status.HTTP_200_OK)
+
+
+class GetDriverProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        user = request.user
+        if user.role != 'admin':
+            return Response({"error": "Only admins can view driver profiles"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            driver_user = User.objects.get(id=user_id, role='driver')
+            profile = driver_user.driver_profile
+            vehicle = profile.vehicle_set.first()  # Assuming one vehicle per profile
+
+            # Get driver documents
+            documents = DriverDocument.objects.filter(user=driver_user)
+            document_serializer = DriverDocumentSerializer(documents, many=True, context={'request': request})
+
+            profile_data = {
+                "user_id": driver_user.id,
+                "email": driver_user.email,
+                "phone_number": driver_user.phone_number,
+                "full_name": driver_user.full_name,
+                "profile": {
+                    "first_name": profile.first_name,
+                    "last_name": profile.last_name,
+                    "license_number": profile.license_number,
+                    "license_expiry": profile.license_expiry,
+                    "city": profile.city,
+                    "service_type": profile.service_type,
+                    "referral_code": profile.referral_code,
+                    "verification_status": profile.verification_status,
+                },
+                "vehicle": {
+                    "brand": vehicle.brand if vehicle else None,
+                    "year": vehicle.year if vehicle else None,
+                    "manufacturer": vehicle.manufacturer if vehicle else None,
+                    "color": vehicle.color if vehicle else None,
+                    "plate_number": vehicle.plate_number if vehicle else None,
+                } if vehicle else None,
+                "documents": document_serializer.data
+            }
+
+            return Response(profile_data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Driver not found"}, status=status.HTTP_404_NOT_FOUND)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
