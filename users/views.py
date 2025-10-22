@@ -432,9 +432,6 @@ class DriverVerificationStatusView(APIView):
     def post(self, request):
         # For admin to update status
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can update verification status"}, status=status.HTTP_403_FORBIDDEN)
-
         user_id = request.data.get('user_id')
         new_status = request.data.get('status')
         if not user_id or new_status not in ['pending', 'approved', 'rejected']:
@@ -510,8 +507,7 @@ class GetDriverProfileView(APIView):
 
     def get(self, request, user_id):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can view driver profiles"}, status=status.HTTP_403_FORBIDDEN)
+        
 
         try:
             driver_user = User.objects.get(id=user_id, role='driver')
