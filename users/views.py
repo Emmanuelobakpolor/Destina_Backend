@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
@@ -488,3 +488,21 @@ class UserStatsView(APIView):
             "total_drivers": total_drivers,
             "total_regular_users": total_regular_users
         }, status=status.HTTP_200_OK)
+
+
+class ListUsersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        users = User.objects.filter(role='user')
+        serializer = UserSerializer(users, many=True, context={'request': request})
+        return Response({"users": serializer.data}, status=status.HTTP_200_OK)
+
+
+class ListDriversView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        drivers = User.objects.filter(role='driver')
+        serializer = UserSerializer(drivers, many=True, context={'request': request})
+        return Response({"drivers": serializer.data}, status=status.HTTP_200_OK)
