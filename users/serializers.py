@@ -46,7 +46,7 @@ class VerifyLoginSerializer(serializers.Serializer):
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverProfile
-        fields = ['id', 'user', 'city', 'service_type', 'first_name', 'last_name', 'license_number', 'license_expiry', 'referral_code', 'verification_status']
+        fields = ['id', 'user', 'city', 'service_type', 'first_name', 'last_name', 'license_number', 'license_expiry', 'referral_code', 'verification_status', 'wallet']
         read_only_fields = ['user']
 
 class VehicleSerializer(serializers.ModelSerializer):
