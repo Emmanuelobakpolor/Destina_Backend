@@ -418,9 +418,6 @@ class DriverVerificationStatusView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role != 'driver':
-            return Response({"error": "Only drivers can check verification status"}, status=status.HTTP_403_FORBIDDEN)
-
         try:
             profile = user.driver_profile
             return Response({
