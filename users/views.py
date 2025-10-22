@@ -454,9 +454,6 @@ class GetAdminDriverDocumentsView(APIView):
 
     def get(self, request, user_id):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can access driver documents"}, status=status.HTTP_403_FORBIDDEN)
-
         try:
             documents = DriverDocument.objects.filter(user_id=user_id).select_related('user')
             serializer = DriverDocumentSerializer(documents, many=True, context={'request': request})
