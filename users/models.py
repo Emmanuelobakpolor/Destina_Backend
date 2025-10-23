@@ -40,6 +40,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     profile_picture = models.ImageField(upload_to='user_profile_pictures/%Y/%m/%d/', blank=True, null=True)
+    wallet = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    todays_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

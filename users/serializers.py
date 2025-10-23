@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name', 'profile_picture']
+        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name', 'profile_picture', 'wallet', 'todays_earnings']
 
     def get_profile_picture(self, obj):
         request = self.context.get('request')
