@@ -532,6 +532,7 @@ class GetDriverProfileView(APIView):
                     "service_type": profile.service_type,
                     "referral_code": profile.referral_code,
                     "verification_status": profile.verification_status,
+                    "wallet": profile.wallet,
                 },
                 "vehicle": {
                     "brand": vehicle.brand if vehicle else None,
