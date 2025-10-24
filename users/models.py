@@ -95,7 +95,6 @@ class Vehicle(models.Model):
     driver_profile = models.OneToOneField(DriverProfile, on_delete=models.CASCADE, related_name='vehicle')
     brand = models.CharField(max_length=100, blank=True, null=True)
     year = models.IntegerField(blank=True, null=True)
-    manufacturer = models.CharField(max_length=100, blank=True, null=True)
     color = models.CharField(max_length=50, blank=True, null=True)
     plate_number = models.CharField(max_length=20, blank=True, null=True)
 
@@ -114,8 +113,6 @@ class DriverDocument(models.Model):
         choices=[
             ('license_document', 'License Document'),
             ('selfie', 'Selfie'),
-            ('road_worthiness', 'Road Worthiness'),
-            ('insurance_certificate', 'Insurance Certificate'),
             ('front_image', 'Front Image'),
             ('back_image', 'Back Image'),
             ('inside_image', 'Inside Image'),
@@ -123,7 +120,7 @@ class DriverDocument(models.Model):
     )
     file = models.FileField(upload_to='driver_documents/%Y/%m/%d/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    expiry_date = models.DateField(blank=True, null=True)  # For license/insurance
+    expiry_date = models.DateField(blank=True, null=True)  # For license
 
     class Meta:
         verbose_name = 'Driver Document'

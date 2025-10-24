@@ -52,7 +52,7 @@ class DriverProfileSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ['id', 'driver_profile', 'brand', 'year', 'manufacturer', 'color', 'plate_number']
+        fields = ['id', 'driver_profile', 'brand', 'year', 'color', 'plate_number']
         read_only_fields = ['driver_profile']
 
 class DriverProfileUpdateSerializer(serializers.Serializer):
@@ -69,11 +69,8 @@ class DriverProfileUpdateSerializer(serializers.Serializer):
 class VehicleUpdateSerializer(serializers.Serializer):
     brand = serializers.CharField(max_length=100)
     year = serializers.IntegerField()
-    manufacturer = serializers.CharField(max_length=100)
     color = serializers.CharField(max_length=50)
     plate_number = serializers.CharField(max_length=20)
-    road_worthiness = serializers.FileField(required=False)
-    insurance_certificate = serializers.FileField(required=False)
     front_image = serializers.ImageField(required=False)
     back_image = serializers.ImageField(required=False)
     inside_image = serializers.ImageField(required=False)
@@ -99,13 +96,10 @@ class VerifyDriverSignupWithFilesSerializer(serializers.Serializer):
     service_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
     brand = serializers.CharField(max_length=100, required=False, allow_blank=True)
     year = serializers.IntegerField(required=False)
-    manufacturer = serializers.CharField(max_length=100, required=False, allow_blank=True)
     color = serializers.CharField(max_length=50, required=False, allow_blank=True)
     plate_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
     license_document = serializers.FileField(required=False)
     selfie = serializers.ImageField(required=False)
-    road_worthiness = serializers.FileField(required=False)
-    insurance_certificate = serializers.FileField(required=False)
     front_image = serializers.ImageField(required=False)
     back_image = serializers.ImageField(required=False)
     inside_image = serializers.ImageField(required=False)

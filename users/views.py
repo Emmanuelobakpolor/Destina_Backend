@@ -273,7 +273,7 @@ class VerifyDriverSignupWithFilesView(APIView):
                 print(f"Profile saved: {profile.first_name} {profile.last_name}")
 
                 vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
-                vehicle_fields = ['brand', 'year', 'manufacturer', 'color', 'plate_number']
+                vehicle_fields = ['brand', 'year', 'color', 'plate_number']
                 for field in vehicle_fields:
                     if serializer.validated_data.get(field):
                         setattr(vehicle, field, serializer.validated_data[field])
@@ -283,8 +283,6 @@ class VerifyDriverSignupWithFilesView(APIView):
                 file_fields = [
                     ('license_document', serializer.validated_data.get('license_document'), serializer.validated_data.get('license_expiry')),
                     ('selfie', serializer.validated_data.get('selfie'), None),
-                    ('road_worthiness', serializer.validated_data.get('road_worthiness'), None),
-                    ('insurance_certificate', serializer.validated_data.get('insurance_certificate'), None),
                     ('front_image', serializer.validated_data.get('front_image'), None),
                     ('back_image', serializer.validated_data.get('back_image'), None),
                     ('inside_image', serializer.validated_data.get('inside_image'), None),
@@ -537,7 +535,6 @@ class GetDriverProfileView(APIView):
                 "vehicle": {
                     "brand": vehicle.brand if vehicle else None,
                     "year": vehicle.year if vehicle else None,
-                    "manufacturer": vehicle.manufacturer if vehicle else None,
                     "color": vehicle.color if vehicle else None,
                     "plate_number": vehicle.plate_number if vehicle else None,
                 } if vehicle else None,
