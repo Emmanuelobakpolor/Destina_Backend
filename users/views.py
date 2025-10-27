@@ -546,3 +546,56 @@ class GetDriverProfileView(APIView):
             return Response({"error": "Driver not found"}, status=status.HTTP_404_NOT_FOUND)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class GetMyDriverProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their profile"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            try:
+                vehicle = profile.vehicle
+            except Vehicle.DoesNotExist:
+                vehicle = None
+
+            # Get driver documents
+            documents = DriverDocument.objects.filter(user=user)
+            document_serializer = DriverDocumentSerializer(documents, many=True, context={'request': request})
+
+            profile_data = {
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "phone_number": user.phone_number,
+                    "full_name": user.full_name,
+                    "wallet": float(user.wallet),
+                    "todays_earnings": float(user.todays_earnings),
+                },
+                "profile": {
+                    "first_name": profile.first_name,
+                    "last_name": profile.last_name,
+                    "license_number": profile.license_number,
+                    "license_expiry": profile.license_expiry,
+                    "city": profile.city,
+                    "service_type": profile.service_type,
+                    "referral_code": profile.referral_code,
+                    "verification_status": profile.verification_status,
+                    "wallet": float(profile.wallet),
+                },
+                "vehicle": {
+                    "brand": vehicle.brand if vehicle else None,
+                    "year": vehicle.year if vehicle else None,
+                    "color": vehicle.color if vehicle else None,
+                    "plate_number": vehicle.plate_number if vehicle else None,
+                } if vehicle else None,
+                "documents": document_serializer.data
+            }
+
+            return Response(profile_data, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
