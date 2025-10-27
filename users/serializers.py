@@ -56,12 +56,12 @@ class VehicleSerializer(serializers.ModelSerializer):
         read_only_fields = ['driver_profile']
 
 class DriverProfileUpdateSerializer(serializers.Serializer):
-    city = serializers.CharField(max_length=100)
-    service_type = serializers.CharField(max_length=100)
-    first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100)
-    license_number = serializers.CharField(max_length=50)
-    license_expiry = serializers.DateField()
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    service_type = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    first_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    license_number = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    license_expiry = serializers.DateField(required=False)
     referral_code = serializers.CharField(max_length=50, required=False, allow_blank=True)
     license_document = serializers.FileField(required=False)
     selfie = serializers.ImageField(required=False)
