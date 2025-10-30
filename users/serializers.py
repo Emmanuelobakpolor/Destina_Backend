@@ -135,22 +135,5 @@ class DriverDocumentSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
-        fields = ['id', 'driver_profile', 'origin', 'destination', 'distance', 'estimated_time', 'fare', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'driver_profile', 'created_at', 'updated_at']
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        if instance.estimated_time:
-            representation['estimated_time'] = str(instance.estimated_time)
-        return representation
-
-    def to_internal_value(self, data):
-        internal_value = super().to_internal_value(data)
-        if 'estimated_time' in data and data['estimated_time']:
-            try:
-                # Parse HH:MM:SS format
-                h, m, s = map(int, data['estimated_time'].split(':'))
-                internal_value['estimated_time'] = timedelta(hours=h, minutes=m, seconds=s)
-            except ValueError:
-                raise serializers.ValidationError({'estimated_time': 'Invalid time format. Use HH:MM:SS'})
-        return internal_value
+        fields = ['id', 'origin', 'destination', 'fare', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
