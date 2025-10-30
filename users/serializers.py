@@ -137,3 +137,9 @@ class RouteSerializer(serializers.ModelSerializer):
         model = Route
         fields = ['id', 'origin', 'destination', 'fare', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        profile = user.driver_profile
+        validated_data['driver_profile'] = profile
+        return super().create(validated_data)
