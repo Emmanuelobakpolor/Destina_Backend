@@ -2,16 +2,20 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument
+from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 import requests
 from django.conf import settings
 from django.utils import timezone
 from datetime import date
 import logging
+
+from users import serializers
+
 
 User = get_user_model()
 
@@ -605,3 +609,43 @@ class GetMyDriverProfileView(APIView):
             return Response(profile_data, status=status.HTTP_200_OK)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RouteListCreateView(ListCreateAPIView):
+    serializer_class = RouteSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role != 'driver':
+            return Route.objects.none()
+        try:
+            profile = user.driver_profile
+            return Route.objects.filter(driver_profile=profile)
+        except DriverProfile.DoesNotExist:
+            return Route.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role != 'driver':
+            raise serializers.ValidationError("Only drivers can create routes")
+        try:
+            profile = user.driver_profile
+            serializer.save(driver_profile=profile)
+        except DriverProfile.DoesNotExist:
+            raise serializers.ValidationError("Driver profile not found")
+
+
+class RouteDetailView(RetrieveUpdateDestroyAPIView):
+    serializer_class = RouteSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role != 'driver':
+            return Route.objects.none()
+        try:
+            profile = user.driver_profile
+            return Route.objects.filter(driver_profile=profile)
+        except DriverProfile.DoesNotExist:
+            return Route.objects.none()

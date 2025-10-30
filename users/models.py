@@ -129,3 +129,17 @@ class DriverDocument(models.Model):
 
     def __str__(self):
         return f"{self.document_type} for {self.user.email}"
+
+
+class Route(models.Model):
+    driver_profile = models.ForeignKey(DriverProfile, on_delete=models.CASCADE, related_name='routes')
+    origin = models.CharField(max_length=255)
+    destination = models.CharField(max_length=255)
+    distance = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)  # in km
+    estimated_time = models.DurationField(blank=True, null=True)  # e.g., timedelta
+    fare = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Route from {self.origin} to {self.destination} by {self.driver_profile.user.email}"
