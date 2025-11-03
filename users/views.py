@@ -451,6 +451,22 @@ class DriverVerificationStatusView(APIView):
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+class GetDriverVerificationStatusByIdView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            driver_user = User.objects.get(id=user_id, role='driver')
+            profile = driver_user.driver_profile
+            return Response({
+                "verification_status": profile.verification_status
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "Driver not found"}, status=status.HTTP_404_NOT_FOUND)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 class GetAdminDriverDocumentsView(APIView):
     permission_classes = [IsAuthenticated]
 
