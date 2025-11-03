@@ -531,6 +531,7 @@ class GetDriverProfileView(APIView):
                 "email": driver_user.email,
                 "phone_number": driver_user.phone_number,
                 "full_name": driver_user.full_name,
+                "todays_earnings": float(driver_user.todays_earnings),
                 "profile": {
                     "first_name": profile.first_name,
                     "last_name": profile.last_name,
@@ -617,13 +618,21 @@ class RouteListCreateView(ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role != 'driver':
-            return Route.objects.none()
-        try:
-            profile = user.driver_profile
-            return Route.objects.filter(driver_profile=profile)
-        except DriverProfile.DoesNotExist:
-            return Route.objects.none()
+        driver_profile_id = self.request.query_params.get('driver_profile_id')
+        if driver_profile_id:
+            try:
+                profile = DriverProfile.objects.get(id=driver_profile_id)
+                return Route.objects.filter(driver_profile=profile)
+            except DriverProfile.DoesNotExist:
+                return Route.objects.none()
+        else:
+            if user.role != 'driver':
+                return Route.objects.none()
+            try:
+                profile = user.driver_profile
+                return Route.objects.filter(driver_profile=profile)
+            except DriverProfile.DoesNotExist:
+                return Route.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user
