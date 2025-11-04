@@ -156,6 +156,9 @@ class Reservation(models.Model):
     driver_phone = models.CharField(max_length=15, blank=True, null=True)
     driver_profile_image_url = models.URLField(blank=True, null=True)
     vehicle_plate = models.CharField(max_length=20, blank=True, null=True)
+    driver_rating = models.CharField(max_length=10, blank=True, null=True)
+    driver_trips = models.IntegerField(blank=True, null=True)
+    driver_company = models.CharField(max_length=255, blank=True, null=True)
     route = models.ForeignKey(Route, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
