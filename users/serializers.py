@@ -181,7 +181,7 @@ class SearchRouteSerializer(serializers.ModelSerializer):
         return float(obj.fare) if obj.fare else 0
 
     def get_departureTime(self, obj):
-        return 'takeoff'
+        return None # Or a calculated time if available
 
     def get_departureLocation(self, obj):
         return obj.origin
