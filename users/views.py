@@ -693,26 +693,38 @@ class ReservationListCreateView(ListCreateAPIView):
                 destination=reservation.destination,
                 driver_profile__verification_status='approved'
             )
+            driver = None
             if matching_routes.exists():
                 selected_route = random.choice(matching_routes)
-                reservation.driver = selected_route.driver_profile
-                # Populate string fields from driver for backward compatibility
-                if reservation.driver:
-                    driver_user = reservation.driver.user
-                    reservation.driver_name = f"{reservation.driver.first_name} {reservation.driver.last_name}"
-                    reservation.driver_phone = driver_user.phone_number
-                    # For profile image, assume selfie document
-                    selfie_doc = DriverDocument.objects.filter(
-                        user=driver_user, document_type='selfie'
-                    ).first()
-                    if selfie_doc:
-                        reservation.driver_profile_image_url = selfie_doc.file.url
-                    reservation.driver_company = "Destina Rides"  # Or from profile
-                    reservation.vehicle_plate = reservation.driver.vehicle.plate_number if hasattr(reservation.driver, 'vehicle') and reservation.driver.vehicle else ''
-                    # Rating and trips: hardcoded or compute; for now, default
-                    reservation.driver_rating = 4.3
-                    reservation.driver_trips = 120
-                reservation.save()
+                driver = selected_route.driver_profile
+                reservation.driver = driver
+
+            # Populate string fields from driver for backward compatibility (or defaults if no driver)
+            if driver:
+                driver_user = driver.user
+                reservation.driver_name = f"{driver.first_name} {driver.last_name}"
+                reservation.driver_phone = driver_user.phone_number
+                # For profile image, assume selfie document
+                selfie_doc = DriverDocument.objects.filter(
+                    user=driver_user, document_type='selfie'
+                ).first()
+                reservation.driver_profile_image_url = selfie_doc.file.url if selfie_doc else ''
+                reservation.driver_company = "Destina Rides"  # Or from profile
+                reservation.vehicle_plate = driver.vehicle.plate_number if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
+                # Rating and trips: hardcoded or compute; for now, default
+                reservation.driver_rating = 4.3
+                reservation.driver_trips = 120
+            else:
+                # Fallback for no driver assigned yet
+                reservation.driver_name = 'N/A (Pending Assignment)'
+                reservation.driver_phone = 'N/A'
+                reservation.driver_profile_image_url = ''
+                reservation.driver_company = 'N/A'
+                reservation.vehicle_plate = 'N/A'
+                reservation.driver_rating = 0.0
+                reservation.driver_trips = 0
+
+            reservation.save()
 
 
 class ReservationDetailView(RetrieveUpdateDestroyAPIView):
