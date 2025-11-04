@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView
+from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView
 
 urlpatterns = [
     path('initiate-signup/', InitiateSignupView.as_view(), name='initiate-signup'),
@@ -25,4 +25,5 @@ urlpatterns = [
     path('routes/<int:pk>/', RouteDetailView.as_view(), name='route-detail'),
     path('reservations/', ReservationListCreateView.as_view(), name='reservation-list-create'),
     path('reservations/<int:pk>/', ReservationDetailView.as_view(), name='reservation-detail'),
+    path('search-routes/', SearchRoutesView.as_view(), name='search-routes'),
 ]

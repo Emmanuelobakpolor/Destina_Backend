@@ -145,6 +145,45 @@ class RouteSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class SearchRouteSerializer(serializers.ModelSerializer):
+    driver_name = serializers.SerializerMethodField()
+    brand = serializers.SerializerMethodField()
+    plate_number = serializers.SerializerMethodField()
+    front_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Route
+        fields = ['driver_name', 'brand', 'plate_number', 'fare', 'front_image_url']
+
+    def get_driver_name(self, obj):
+        profile = obj.driver_profile
+        first_name = profile.first_name or ''
+        last_name = profile.last_name or ''
+        return f"{first_name} {last_name}".strip() or 'Driver'
+
+    def get_brand(self, obj):
+        try:
+            return obj.driver_profile.vehicle.brand
+        except Vehicle.DoesNotExist:
+            return None
+
+    def get_plate_number(self, obj):
+        try:
+            return obj.driver_profile.vehicle.plate_number
+        except Vehicle.DoesNotExist:
+            return None
+
+    def get_front_image_url(self, obj):
+        request = self.context.get('request')
+        try:
+            doc = DriverDocument.objects.get(user=obj.driver_profile.user, document_type='front_image')
+            if doc.file and hasattr(doc.file, 'url'):
+                return request.build_absolute_uri(doc.file.url)
+        except DriverDocument.DoesNotExist:
+            pass
+        return None
+
+
 class ReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
