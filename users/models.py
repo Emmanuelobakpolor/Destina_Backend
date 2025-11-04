@@ -159,6 +159,7 @@ class Reservation(models.Model):
     driver_rating = models.DecimalField(decimal_places=2, max_digits=3, blank=True, null=True)
     driver_trips = models.IntegerField(blank=True, null=True)
     driver_company = models.CharField(max_length=255, blank=True, null=True)
+    driver = models.ForeignKey('DriverProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations')
     route = models.ForeignKey(Route, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

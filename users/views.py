@@ -685,7 +685,34 @@ class ReservationListCreateView(ListCreateAPIView):
         return Reservation.objects.filter(user=user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        reservation = serializer.save(user=self.request.user)
+        if reservation.ride_type == 'vehicle':
+            # Find approved drivers with matching route
+            matching_routes = Route.objects.filter(
+                origin=reservation.pickup_location,
+                destination=reservation.destination,
+                driver_profile__verification_status='approved'
+            )
+            if matching_routes.exists():
+                selected_route = random.choice(matching_routes)
+                reservation.driver = selected_route.driver_profile
+                # Populate string fields from driver for backward compatibility
+                if reservation.driver:
+                    driver_user = reservation.driver.user
+                    reservation.driver_name = f"{reservation.driver.first_name} {reservation.driver.last_name}"
+                    reservation.driver_phone = driver_user.phone_number
+                    # For profile image, assume selfie document
+                    selfie_doc = DriverDocument.objects.filter(
+                        user=driver_user, document_type='selfie'
+                    ).first()
+                    if selfie_doc:
+                        reservation.driver_profile_image_url = selfie_doc.file.url
+                    reservation.driver_company = "Destina Rides"  # Or from profile
+                    reservation.vehicle_plate = reservation.driver.vehicle.plate_number if hasattr(reservation.driver, 'vehicle') and reservation.driver.vehicle else ''
+                    # Rating and trips: hardcoded or compute; for now, default
+                    reservation.driver_rating = 4.3
+                    reservation.driver_trips = 120
+                reservation.save()
 
 
 class ReservationDetailView(RetrieveUpdateDestroyAPIView):
