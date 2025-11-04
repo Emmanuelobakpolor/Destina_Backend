@@ -146,20 +146,52 @@ class RouteSerializer(serializers.ModelSerializer):
 
 
 class SearchRouteSerializer(serializers.ModelSerializer):
-    driver_name = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    departureTime = serializers.SerializerMethodField()
+    departureLocation = serializers.SerializerMethodField()
+    arrivalTime = serializers.SerializerMethodField()
+    arrivalLocation = serializers.SerializerMethodField()
+    duration = serializers.SerializerMethodField()
+    capacity = serializers.SerializerMethodField()
     brand = serializers.SerializerMethodField()
     plate_number = serializers.SerializerMethodField()
     front_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Route
-        fields = ['driver_name', 'brand', 'plate_number', 'fare', 'front_image_url']
+        fields = ['name', 'type', 'price', 'departureTime', 'departureLocation', 'arrivalTime', 'arrivalLocation', 'duration', 'capacity', 'brand', 'plate_number', 'front_image_url']
 
-    def get_driver_name(self, obj):
+    def get_name(self, obj):
         profile = obj.driver_profile
         first_name = profile.first_name or ''
         last_name = profile.last_name or ''
         return f"{first_name} {last_name}".strip() or 'Driver'
+
+    def get_type(self, obj):
+        return obj.driver_profile.service_type or 'Ride Service'
+
+    def get_price(self, obj):
+        return float(obj.fare) if obj.fare else 0
+
+    def get_departureTime(self, obj):
+        return 'Now'
+
+    def get_departureLocation(self, obj):
+        return obj.origin
+
+    def get_arrivalTime(self, obj):
+        return 'Estimated'
+
+    def get_arrivalLocation(self, obj):
+        return obj.destination
+
+    def get_duration(self, obj):
+        return '30 min'  # Default duration
+
+    def get_capacity(self, obj):
+        return 4  # Default capacity
 
     def get_brand(self, obj):
         try:
