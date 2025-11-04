@@ -176,19 +176,19 @@ class SearchRouteSerializer(serializers.ModelSerializer):
         return float(obj.fare) if obj.fare else 0
 
     def get_departureTime(self, obj):
-        return 'Now'
+        return 'takeoff'
 
     def get_departureLocation(self, obj):
         return obj.origin
 
     def get_arrivalTime(self, obj):
-        return 'Estimated'
+        return 'Destination'
 
     def get_arrivalLocation(self, obj):
         return obj.destination
 
     def get_duration(self, obj):
-        return '30 min'  # Default duration
+        return 'TBD'  # Default duration
 
     def get_capacity(self, obj):
         return 4  # Default capacity
