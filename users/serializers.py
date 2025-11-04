@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route
+from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation
 from datetime import timedelta
 
 class UserSerializer(serializers.ModelSerializer):
@@ -143,3 +143,10 @@ class RouteSerializer(serializers.ModelSerializer):
         profile = user.driver_profile
         validated_data['driver_profile'] = profile
         return super().create(validated_data)
+
+
+class ReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reservation
+        fields = ['id', 'user', 'ride_type', 'pickup_location', 'destination', 'reservation_seats', 'amount', 'date', 'time', 'driver_name', 'driver_phone', 'driver_profile_image_url', 'driver_rating', 'driver_trips', 'vehicle_plate', 'driver_company', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']

@@ -141,3 +141,25 @@ class Route(models.Model):
 
     def __str__(self):
         return f"Route from {self.origin} to {self.destination} by {self.driver_profile.user.email}"
+
+
+class Reservation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservations')
+    ride_type = models.CharField(max_length=10, choices=[('bus', 'Bus'), ('vehicle', 'Vehicle')])
+    pickup_location = models.CharField(max_length=255)
+    destination = models.CharField(max_length=255)
+    reservation_seats = models.CharField(max_length=255)  # e.g., '1B, 2C'
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+    time = models.TimeField()
+    driver_name = models.CharField(max_length=255, blank=True, null=True)
+    driver_phone = models.CharField(max_length=15, blank=True, null=True)
+    driver_profile_image_url = models.URLField(blank=True, null=True)
+    driver_rating = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True)
+    driver_trips = models.IntegerField(blank=True, null=True)
+    vehicle_plate = models.CharField(max_length=20, blank=True, null=True)
+    driver_company = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Reservation for {self.user.email} on {self.date}"

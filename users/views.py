@@ -2,11 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route
+from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 import requests
 from django.conf import settings
@@ -674,3 +674,24 @@ class RouteDetailView(RetrieveUpdateDestroyAPIView):
             return Route.objects.filter(driver_profile=profile)
         except DriverProfile.DoesNotExist:
             return Route.objects.none()
+
+
+class ReservationListCreateView(ListCreateAPIView):
+    serializer_class = ReservationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Reservation.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class ReservationDetailView(RetrieveUpdateDestroyAPIView):
+    serializer_class = ReservationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Reservation.objects.filter(user=user)
