@@ -158,10 +158,15 @@ class SearchRouteSerializer(serializers.ModelSerializer):
     brand = serializers.SerializerMethodField()
     plate_number = serializers.SerializerMethodField()
     front_image_url = serializers.SerializerMethodField()
+    phone_number = serializers.CharField(source='driver_profile.user.phone_number')
+    selfie_url = serializers.SerializerMethodField()
+    first_name = serializers.CharField(source='driver_profile.first_name')
+    last_name = serializers.CharField(source='driver_profile.last_name')
+    route_id = serializers.IntegerField(source='id')
 
     class Meta:
         model = Route
-        fields = ['name', 'type', 'price', 'departureTime', 'departureLocation', 'arrivalTime', 'arrivalLocation', 'duration', 'capacity', 'brand', 'plate_number', 'front_image_url']
+        fields = ['name', 'type', 'price', 'departureTime', 'departureLocation', 'arrivalTime', 'arrivalLocation', 'duration', 'capacity', 'brand', 'plate_number', 'front_image_url', 'phone_number', 'selfie_url', 'first_name', 'last_name', 'route_id']
 
     def get_name(self, obj):
         profile = obj.driver_profile
@@ -209,6 +214,16 @@ class SearchRouteSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         try:
             doc = DriverDocument.objects.get(user=obj.driver_profile.user, document_type='front_image')
+            if doc.file and hasattr(doc.file, 'url'):
+                return request.build_absolute_uri(doc.file.url)
+        except DriverDocument.DoesNotExist:
+            pass
+        return None
+
+    def get_selfie_url(self, obj):
+        request = self.context.get('request')
+        try:
+            doc = DriverDocument.objects.get(user=obj.driver_profile.user, document_type='selfie')
             if doc.file and hasattr(doc.file, 'url'):
                 return request.build_absolute_uri(doc.file.url)
         except DriverDocument.DoesNotExist:
