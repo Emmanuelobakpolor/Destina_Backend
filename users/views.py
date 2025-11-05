@@ -685,12 +685,17 @@ class ReservationListCreateView(ListCreateAPIView):
         return Reservation.objects.filter(user=user)
 
     def perform_create(self, serializer):
+        logger.info("Starting reservation creation")
         reservation = serializer.save(user=self.request.user)
+        logger.info(f"Reservation created with ID: {reservation.id}, ride_type: {reservation.ride_type}")
         status = self.request.data.get('status', 'pending')
         reservation.status = status
+        logger.info(f"Setting status to: {status}")
         if reservation.ride_type == 'vehicle' and status == 'paid':
+            logger.info("Ride type is vehicle and status is paid, assigning driver")
             # Check if route_id is provided in the request data
             route_id = self.request.data.get('route_id')
+            logger.info(f"Route ID provided: {route_id}")
             driver = None
             if route_id:
                 try:
@@ -699,7 +704,9 @@ class ReservationListCreateView(ListCreateAPIView):
                     driver = selected_route.driver_profile
                     reservation.driver = driver
                     reservation.route = selected_route
+                    logger.info(f"Assigned driver from route ID: {driver.id if driver else None}")
                 except Route.DoesNotExist:
+                    logger.warning(f"Route ID {route_id} does not exist, falling back to random selection")
                     # If route_id is invalid, fall back to random selection
                     matching_routes = Route.objects.filter(
                         origin=reservation.pickup_location,
@@ -711,7 +718,11 @@ class ReservationListCreateView(ListCreateAPIView):
                         driver = selected_route.driver_profile
                         reservation.driver = driver
                         reservation.route = selected_route
+                        logger.info(f"Assigned driver via random selection: {driver.id if driver else None}")
+                    else:
+                        logger.warning("No matching routes found for random selection")
             else:
+                logger.info("No route_id provided, using original logic")
                 # Original logic: Find approved drivers with matching route
                 matching_routes = Route.objects.filter(
                     origin=reservation.pickup_location,
@@ -723,6 +734,9 @@ class ReservationListCreateView(ListCreateAPIView):
                     driver = selected_route.driver_profile
                     reservation.driver = driver
                     reservation.route = selected_route
+                    logger.info(f"Assigned driver via original logic: {driver.id if driver else None}")
+                else:
+                    logger.warning("No matching routes found")
 
             # Populate string fields from driver for backward compatibility (or defaults if no driver)
             if driver:
@@ -739,6 +753,7 @@ class ReservationListCreateView(ListCreateAPIView):
                 # Rating and trips: hardcoded or compute; for now, default
                 reservation.driver_rating = 4.3
                 reservation.driver_trips = 120
+                logger.info("Driver fields populated")
             else:
                 # Fallback for no driver assigned yet
                 reservation.driver_name = 'N/A (Pending Assignment)'
@@ -748,7 +763,12 @@ class ReservationListCreateView(ListCreateAPIView):
                 reservation.vehicle_plate = 'N/A'
                 reservation.driver_rating = 0.0
                 reservation.driver_trips = 0
+                logger.info("Fallback driver fields set")
 
+            reservation.save()
+            logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
+        else:
+            logger.info("Not assigning driver: either not vehicle or not paid")
             reservation.save()
 
 
