@@ -686,7 +686,9 @@ class ReservationListCreateView(ListCreateAPIView):
 
     def perform_create(self, serializer):
         reservation = serializer.save(user=self.request.user)
-        if reservation.ride_type == 'vehicle':
+        status = self.request.data.get('status', 'pending')
+        reservation.status = status
+        if reservation.ride_type == 'vehicle' and status == 'paid':
             # Check if route_id is provided in the request data
             route_id = self.request.data.get('route_id')
             driver = None
@@ -757,6 +759,53 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         return Reservation.objects.filter(user=user)
+
+    def perform_update(self, serializer):
+        reservation = serializer.save()
+        if reservation.ride_type == 'vehicle' and reservation.status == 'paid' and reservation.driver is None:
+            # Assign driver post-payment for vehicle reservations
+            route_id = self.request.data.get('route_id')
+            driver = None
+            if route_id:
+                try:
+                    selected_route = Route.objects.get(id=route_id)
+                    driver = selected_route.driver_profile
+                    reservation.driver = driver
+                    reservation.route = selected_route
+                except Route.DoesNotExist:
+                    matching_routes = Route.objects.filter(
+                        origin=reservation.pickup_location,
+                        destination=reservation.destination,
+                        driver_profile__verification_status='approved'
+                    )
+                    if matching_routes.exists():
+                        selected_route = random.choice(matching_routes)
+                        driver = selected_route.driver_profile
+                        reservation.driver = driver
+                        reservation.route = selected_route
+
+            if driver:
+                driver_user = driver.user
+                reservation.driver_name = f"{driver.first_name} {driver.last_name}"
+                reservation.driver_phone = driver_user.phone_number
+                selfie_doc = DriverDocument.objects.filter(
+                    user=driver_user, document_type='selfie'
+                ).first()
+                reservation.driver_profile_image_url = selfie_doc.file.url if selfie_doc else ''
+                reservation.driver_company = "Destina Rides"
+                reservation.vehicle_plate = driver.vehicle.plate_number if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
+                reservation.driver_rating = 4.3
+                reservation.driver_trips = 120
+            else:
+                reservation.driver_name = 'N/A (Pending Assignment)'
+                reservation.driver_phone = 'N/A'
+                reservation.driver_profile_image_url = ''
+                reservation.driver_company = 'N/A'
+                reservation.vehicle_plate = 'N/A'
+                reservation.driver_rating = 0.0
+                reservation.driver_trips = 0
+
+            reservation.save()
 
 
 class SearchRoutesView(APIView):
