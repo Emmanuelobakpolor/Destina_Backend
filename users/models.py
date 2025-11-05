@@ -167,3 +167,34 @@ class Reservation(models.Model):
 
     def __str__(self):
         return f"Reservation for {self.user.email} on {self.date}"
+
+
+class FlutterwaveSubaccount(models.Model):
+    driver_profile = models.OneToOneField(DriverProfile, on_delete=models.CASCADE, related_name='flutterwave_subaccount')
+    subaccount_id = models.CharField(max_length=100, blank=True, null=True)  # Flutterwave subaccount ID
+    account_reference = models.CharField(max_length=100, unique=True)  # Unique reference for the subaccount
+    account_name = models.CharField(max_length=255)  # Bank account name
+    account_number = models.CharField(max_length=20)  # Bank account number
+    bank_code = models.CharField(max_length=10)  # Bank code (e.g., 058 for GTBank)
+    bank_name = models.CharField(max_length=255, blank=True, null=True)  # Bank name for display
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Subaccount for {self.driver_profile.user.email} - {self.account_reference}"
+
+
+class WithdrawalRequest(models.Model):
+    driver_profile = models.ForeignKey(DriverProfile, on_delete=models.CASCADE, related_name='withdrawal_requests')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('processed', 'Processed')],
+        default='pending'
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)  # Admin notes
+
+    def __str__(self):
+        return f"Withdrawal {self.amount} for {self.driver_profile.user.email} - {self.status}"

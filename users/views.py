@@ -2,11 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation
+from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 import requests
 from django.conf import settings
@@ -848,3 +848,245 @@ class SearchRoutesView(APIView):
 
         serializer = SearchRouteSerializer(routes, many=True, context={'request': request})
         return Response({"routes": serializer.data}, status=status.HTTP_200_OK)
+
+
+class CreateFlutterwaveSubaccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can create subaccounts"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = FlutterwaveSubaccountSerializer(data=request.data)
+        if serializer.is_valid():
+            # Check if subaccount already exists
+            if FlutterwaveSubaccount.objects.filter(driver_profile=profile).exists():
+                return Response({"error": "Subaccount already exists for this driver"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create subaccount via Flutterwave API
+            subaccount_data = {
+                "account_bank": serializer.validated_data['bank_code'],
+                "account_number": serializer.validated_data['account_number'],
+                "business_name": f"{profile.first_name} {profile.last_name}",
+                "business_email": user.email,
+                "business_contact": user.phone_number or "",
+                "business_contact_mobile": user.phone_number or "",
+                "business_mobile": user.phone_number or "",
+                "country": "NG",  # Assuming Nigeria, adjust as needed
+                "meta": [{"metaname": "Driver ID", "metavalue": str(profile.id)}],
+                "split_type": "percentage",
+                "split_value": 0.1  # 10% commission, adjust as needed
+            }
+
+            headers = {
+                "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            try:
+                response = requests.post(
+                    "https://api.flutterwave.com/v3/subaccounts",
+                    json=subaccount_data,
+                    headers=headers
+                )
+                response_data = response.json()
+
+                if response.status_code == 200 and response_data.get('status') == 'success':
+                    subaccount = FlutterwaveSubaccount.objects.create(
+                        driver_profile=profile,
+                        subaccount_id=response_data['data']['subaccount_id'],
+                        account_reference=response_data['data']['account_reference'],
+                        account_name=serializer.validated_data['account_name'],
+                        account_number=serializer.validated_data['account_number'],
+                        bank_code=serializer.validated_data['bank_code'],
+                        bank_name=serializer.validated_data.get('bank_name')
+                    )
+                    return Response({
+                        "message": "Subaccount created successfully",
+                        "subaccount": FlutterwaveSubaccountSerializer(subaccount).data
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        "error": "Failed to create subaccount with Flutterwave",
+                        "details": response_data
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except requests.RequestException as e:
+                return Response({"error": "Network error while creating subaccount"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetMyFlutterwaveSubaccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their subaccount"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            subaccount = FlutterwaveSubaccount.objects.get(driver_profile=profile)
+            serializer = FlutterwaveSubaccountSerializer(subaccount)
+            return Response({"subaccount": serializer.data}, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        except FlutterwaveSubaccount.DoesNotExist:
+            return Response({"error": "Subaccount not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class RequestWithdrawalView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can request withdrawals"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = WithdrawalRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            amount = serializer.validated_data['amount']
+
+            # Check if driver has sufficient balance
+            if profile.wallet < amount:
+                return Response({"error": "Insufficient wallet balance"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if subaccount exists
+            if not FlutterwaveSubaccount.objects.filter(driver_profile=profile).exists():
+                return Response({"error": "Please create a Flutterwave subaccount first"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create withdrawal request
+            withdrawal = WithdrawalRequest.objects.create(
+                driver_profile=profile,
+                amount=amount
+            )
+
+            return Response({
+                "message": "Withdrawal request submitted successfully",
+                "withdrawal": WithdrawalRequestSerializer(withdrawal).data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListMyWithdrawalRequestsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            withdrawals = WithdrawalRequest.objects.filter(driver_profile=profile).order_by('-requested_at')
+            serializer = WithdrawalRequestSerializer(withdrawals, many=True)
+            return Response({"withdrawals": serializer.data}, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ListAllWithdrawalRequestsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'admin':
+            return Response({"error": "Only admins can access all withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
+
+        withdrawals = WithdrawalRequest.objects.all().order_by('-requested_at')
+        serializer = WithdrawalRequestSerializer(withdrawals, many=True)
+        return Response({"withdrawals": serializer.data}, status=status.HTTP_200_OK)
+
+
+class ProcessWithdrawalRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, withdrawal_id):
+        user = request.user
+        if user.role != 'admin':
+            return Response({"error": "Only admins can process withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            withdrawal = WithdrawalRequest.objects.get(id=withdrawal_id)
+        except WithdrawalRequest.DoesNotExist:
+            return Response({"error": "Withdrawal request not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        action = request.data.get('action')
+        if action not in ['approve', 'reject']:
+            return Response({"error": "Invalid action. Must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action == 'approve':
+            # Check if subaccount exists
+            try:
+                subaccount = FlutterwaveSubaccount.objects.get(driver_profile=withdrawal.driver_profile)
+            except FlutterwaveSubaccount.DoesNotExist:
+                return Response({"error": "Driver subaccount not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Check if driver has sufficient balance
+            if withdrawal.driver_profile.wallet < withdrawal.amount:
+                return Response({"error": "Insufficient wallet balance"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Process transfer via Flutterwave
+            transfer_data = {
+                "account_bank": subaccount.bank_code,
+                "account_number": subaccount.account_number,
+                "amount": float(withdrawal.amount),
+                "narration": f"Withdrawal for {withdrawal.driver_profile.user.email}",
+                "currency": "NGN",
+                "reference": f"withdrawal_{withdrawal.id}_{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                "callback_url": f"{settings.BASE_URL}/api/withdrawal-callback/",
+                "debit_currency": "NGN"
+            }
+
+            headers = {
+                "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            try:
+                response = requests.post(
+                    "https://api.flutterwave.com/v3/transfers",
+                    json=transfer_data,
+                    headers=headers
+                )
+                response_data = response.json()
+
+                if response.status_code == 200 and response_data.get('status') == 'success':
+                    # Deduct from wallet
+                    withdrawal.driver_profile.wallet -= withdrawal.amount
+                    withdrawal.driver_profile.save()
+
+                    # Update withdrawal status
+                    withdrawal.status = 'processed'
+                    withdrawal.processed_at = timezone.now()
+                    withdrawal.notes = request.data.get('notes', '')
+                    withdrawal.save()
+
+                    return Response({
+                        "message": "Withdrawal processed successfully",
+                        "transfer_id": response_data['data']['id']
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        "error": "Failed to process transfer with Flutterwave",
+                        "details": response_data
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except requests.RequestException as e:
+                return Response({"error": "Network error while processing transfer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        elif action == 'reject':
+            withdrawal.status = 'rejected'
+            withdrawal.processed_at = timezone.now()
+            withdrawal.notes = request.data.get('notes', '')
+            withdrawal.save()
+            return Response({"message": "Withdrawal request rejected"}, status=status.HTTP_200_OK)

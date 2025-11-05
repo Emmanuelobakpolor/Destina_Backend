@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView
+from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView
 
 urlpatterns = [
     path('initiate-signup/', InitiateSignupView.as_view(), name='initiate-signup'),
@@ -26,4 +26,10 @@ urlpatterns = [
     path('reservations/', ReservationListCreateView.as_view(), name='reservation-list-create'),
     path('reservations/<int:pk>/', ReservationDetailView.as_view(), name='reservation-detail'),
     path('search-routes/', SearchRoutesView.as_view(), name='search-routes'),
+    path('create-flutterwave-subaccount/', CreateFlutterwaveSubaccountView.as_view(), name='create-flutterwave-subaccount'),
+    path('my-flutterwave-subaccount/', GetMyFlutterwaveSubaccountView.as_view(), name='my-flutterwave-subaccount'),
+    path('request-withdrawal/', RequestWithdrawalView.as_view(), name='request-withdrawal'),
+    path('my-withdrawal-requests/', ListMyWithdrawalRequestsView.as_view(), name='my-withdrawal-requests'),
+    path('all-withdrawal-requests/', ListAllWithdrawalRequestsView.as_view(), name='all-withdrawal-requests'),
+    path('process-withdrawal/<int:withdrawal_id>/', ProcessWithdrawalRequestView.as_view(), name='process-withdrawal'),
 ]

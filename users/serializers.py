@@ -1,14 +1,16 @@
 from rest_framework import serializers
-from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation
+from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest
 from datetime import timedelta
 
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
+    has_subaccount = serializers.SerializerMethodField()
+    subaccount_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name', 'profile_picture', 'wallet', 'todays_earnings']
+        fields = ['id', 'email', 'role', 'full_name', 'phone_number', 'date_of_birth', 'display_name', 'profile_picture', 'wallet', 'todays_earnings', 'has_subaccount', 'subaccount_balance']
 
     def get_profile_picture(self, obj):
         request = self.context.get('request')
@@ -24,6 +26,25 @@ class UserSerializer(serializers.ModelSerializer):
                 return 'Driver'
         else:
             return obj.full_name or 'User'
+
+    def get_has_subaccount(self, obj):
+        if obj.role == 'driver':
+            try:
+                return obj.driver_profile.flutterwave_subaccount is not None
+            except (DriverProfile.DoesNotExist, FlutterwaveSubaccount.DoesNotExist):
+                return False
+        return False
+
+    def get_subaccount_balance(self, obj):
+        if obj.role == 'driver':
+            try:
+                subaccount = obj.driver_profile.flutterwave_subaccount
+                if subaccount:
+                    # Fetch balance from Flutterwave API (placeholder; implement in view)
+                    return obj.driver_profile.wallet  # Fallback to wallet for now
+            except (DriverProfile.DoesNotExist, FlutterwaveSubaccount.DoesNotExist):
+                pass
+        return obj.wallet
 
 class SignupSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -238,3 +259,17 @@ class ReservationSerializer(serializers.ModelSerializer):
         model = Reservation
         fields = ['id', 'user', 'ride_type', 'status', 'pickup_location', 'destination', 'reservation_seats', 'amount', 'date', 'time', 'driver_name', 'driver_phone', 'driver_profile_image_url', 'driver_rating', 'driver_trips', 'vehicle_plate', 'vehicle_brand', 'driver_company', 'driver', 'route', 'created_at']
         read_only_fields = ['id', 'user', 'driver', 'route', 'created_at']
+
+
+class FlutterwaveSubaccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FlutterwaveSubaccount
+        fields = ['id', 'driver_profile', 'subaccount_id', 'account_reference', 'account_name', 'account_number', 'bank_code', 'bank_name', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'driver_profile', 'subaccount_id', 'account_reference', 'created_at', 'updated_at']
+
+
+class WithdrawalRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WithdrawalRequest
+        fields = ['id', 'driver_profile', 'amount', 'status', 'requested_at', 'processed_at', 'notes']
+        read_only_fields = ['id', 'driver_profile', 'requested_at', 'processed_at', 'notes']
