@@ -687,17 +687,37 @@ class ReservationListCreateView(ListCreateAPIView):
     def perform_create(self, serializer):
         reservation = serializer.save(user=self.request.user)
         if reservation.ride_type == 'vehicle':
-            # Find approved drivers with matching route
-            matching_routes = Route.objects.filter(
-                origin=reservation.pickup_location,
-                destination=reservation.destination,
-                driver_profile__verification_status='approved'
-            )
+            # Check if route_id is provided in the request data
+            route_id = self.request.data.get('route_id')
             driver = None
-            if matching_routes.exists():
-                selected_route = random.choice(matching_routes)
-                driver = selected_route.driver_profile
-                reservation.driver = driver
+            if route_id:
+                try:
+                    # Find the specific route and assign its driver
+                    selected_route = Route.objects.get(id=route_id)
+                    driver = selected_route.driver_profile
+                    reservation.driver = driver
+                except Route.DoesNotExist:
+                    # If route_id is invalid, fall back to random selection
+                    matching_routes = Route.objects.filter(
+                        origin=reservation.pickup_location,
+                        destination=reservation.destination,
+                        driver_profile__verification_status='approved'
+                    )
+                    if matching_routes.exists():
+                        selected_route = random.choice(matching_routes)
+                        driver = selected_route.driver_profile
+                        reservation.driver = driver
+            else:
+                # Original logic: Find approved drivers with matching route
+                matching_routes = Route.objects.filter(
+                    origin=reservation.pickup_location,
+                    destination=reservation.destination,
+                    driver_profile__verification_status='approved'
+                )
+                if matching_routes.exists():
+                    selected_route = random.choice(matching_routes)
+                    driver = selected_route.driver_profile
+                    reservation.driver = driver
 
             # Populate string fields from driver for backward compatibility (or defaults if no driver)
             if driver:
