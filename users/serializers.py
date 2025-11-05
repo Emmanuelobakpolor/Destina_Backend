@@ -232,6 +232,8 @@ class SearchRouteSerializer(serializers.ModelSerializer):
 
 
 class ReservationSerializer(serializers.ModelSerializer):
+    time = serializers.TimeField(required=False, allow_null=True)
+
     class Meta:
         model = Reservation
         fields = ['id', 'user', 'ride_type', 'pickup_location', 'destination', 'reservation_seats', 'amount', 'date', 'time', 'driver_name', 'driver_phone', 'driver_profile_image_url', 'driver_rating', 'driver_trips', 'vehicle_plate', 'driver_company', 'driver', 'route', 'created_at']

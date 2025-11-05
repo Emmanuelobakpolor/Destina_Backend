@@ -151,7 +151,7 @@ class Reservation(models.Model):
     reservation_seats = models.CharField(max_length=255)  # e.g., '1B, 2C'
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField()
-    time = models.TimeField()
+    time = models.TimeField(blank=True, null=True)
     driver_name = models.CharField(max_length=255, blank=True, null=True)
     driver_phone = models.CharField(max_length=15, blank=True, null=True)
     driver_profile_image_url = models.URLField(blank=True, null=True)
