@@ -749,6 +749,7 @@ class ReservationListCreateView(ListCreateAPIView):
                 ).first()
                 reservation.driver_profile_image_url = selfie_doc.file.url if selfie_doc else ''
                 reservation.driver_company = "Destina Rides"  # Or from profile
+                reservation.vehicle_brand = driver.vehicle.brand if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
                 reservation.vehicle_plate = driver.vehicle.plate_number if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
                 # Rating and trips: hardcoded or compute; for now, default
                 reservation.driver_rating = 4.3
@@ -760,6 +761,7 @@ class ReservationListCreateView(ListCreateAPIView):
                 reservation.driver_phone = 'N/A'
                 reservation.driver_profile_image_url = ''
                 reservation.driver_company = 'N/A'
+                reservation.vehicle_brand = 'N/A'
                 reservation.vehicle_plate = 'N/A'
                 reservation.driver_rating = 0.0
                 reservation.driver_trips = 0
@@ -813,6 +815,7 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
                 ).first()
                 reservation.driver_profile_image_url = selfie_doc.file.url if selfie_doc else ''
                 reservation.driver_company = "Destina Rides"
+                reservation.vehicle_brand = driver.vehicle.brand if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
                 reservation.vehicle_plate = driver.vehicle.plate_number if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
                 reservation.driver_rating = 4.3
                 reservation.driver_trips = 120
@@ -821,6 +824,7 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
                 reservation.driver_phone = 'N/A'
                 reservation.driver_profile_image_url = ''
                 reservation.driver_company = 'N/A'
+                reservation.vehicle_brand = 'N/A'
                 reservation.vehicle_plate = 'N/A'
                 reservation.driver_rating = 0.0
                 reservation.driver_trips = 0

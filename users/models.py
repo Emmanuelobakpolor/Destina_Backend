@@ -157,6 +157,7 @@ class Reservation(models.Model):
     driver_phone = models.CharField(max_length=15, blank=True, null=True)
     driver_profile_image_url = models.URLField(blank=True, null=True)
     vehicle_plate = models.CharField(max_length=20, blank=True, null=True)
+    vehicle_brand = models.CharField(max_length=100, blank=True, null=True)
     driver_rating = models.DecimalField(decimal_places=2, max_digits=3, blank=True, null=True)
     driver_trips = models.IntegerField(blank=True, null=True)
     driver_company = models.CharField(max_length=255, blank=True, null=True)
