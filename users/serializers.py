@@ -234,5 +234,5 @@ class SearchRouteSerializer(serializers.ModelSerializer):
 class ReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
-        fields = ['id', 'user', 'ride_type', 'pickup_location', 'destination', 'reservation_seats', 'amount', 'date', 'time', 'driver_name', 'driver_phone', 'driver_profile_image_url', 'driver_rating', 'driver_trips', 'vehicle_plate', 'driver_company', 'created_at']
-        read_only_fields = ['id', 'user', 'created_at']
+        fields = ['id', 'user', 'ride_type', 'pickup_location', 'destination', 'reservation_seats', 'amount', 'date', 'time', 'driver_name', 'driver_phone', 'driver_profile_image_url', 'driver_rating', 'driver_trips', 'vehicle_plate', 'driver_company', 'driver', 'route', 'created_at']
+        read_only_fields = ['id', 'user', 'driver', 'route', 'created_at']

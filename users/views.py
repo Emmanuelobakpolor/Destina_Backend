@@ -696,6 +696,7 @@ class ReservationListCreateView(ListCreateAPIView):
                     selected_route = Route.objects.get(id=route_id)
                     driver = selected_route.driver_profile
                     reservation.driver = driver
+                    reservation.route = selected_route
                 except Route.DoesNotExist:
                     # If route_id is invalid, fall back to random selection
                     matching_routes = Route.objects.filter(
@@ -707,6 +708,7 @@ class ReservationListCreateView(ListCreateAPIView):
                         selected_route = random.choice(matching_routes)
                         driver = selected_route.driver_profile
                         reservation.driver = driver
+                        reservation.route = selected_route
             else:
                 # Original logic: Find approved drivers with matching route
                 matching_routes = Route.objects.filter(
@@ -718,6 +720,7 @@ class ReservationListCreateView(ListCreateAPIView):
                     selected_route = random.choice(matching_routes)
                     driver = selected_route.driver_profile
                     reservation.driver = driver
+                    reservation.route = selected_route
 
             # Populate string fields from driver for backward compatibility (or defaults if no driver)
             if driver:
