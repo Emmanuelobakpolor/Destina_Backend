@@ -691,8 +691,10 @@ class ReservationListCreateView(ListCreateAPIView):
         status = self.request.data.get('status', 'pending')
         reservation.status = status
         logger.info(f"Setting status to: {status}")
-        if reservation.ride_type == 'vehicle' and status == 'paid':
-            logger.info("Ride type is vehicle and status is paid, assigning driver")
+        if reservation.ride_type == 'vehicle':
+            logger.info("Ride type is vehicle, automatically approving and assigning driver")
+            # Automatically approve vehicle reservations
+            reservation.status = 'active'
             # Check if route_id is provided in the request data
             route_id = self.request.data.get('route_id')
             logger.info(f"Route ID provided: {route_id}")
@@ -770,15 +772,7 @@ class ReservationListCreateView(ListCreateAPIView):
             reservation.save()
             logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
         else:
-            # This block was missing from the original logic.
-            # If a driver is assigned, the status should become 'active'.
-            if reservation.ride_type == 'vehicle' and reservation.driver is not None:
-                reservation.status = 'active'
-            logger.info("Not assigning driver: either not vehicle or not paid")
-            reservation.save()
-
-        if reservation.ride_type == 'vehicle' and reservation.driver is not None:
-            reservation.status = 'active'
+            logger.info("Not a vehicle reservation, keeping status as is")
             reservation.save()
 
 
