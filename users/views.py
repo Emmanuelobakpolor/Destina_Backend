@@ -692,9 +692,9 @@ class ReservationListCreateView(ListCreateAPIView):
         reservation.status = status
         logger.info(f"Setting status to: {status}")
         if reservation.ride_type == 'vehicle':
-            logger.info("Ride type is vehicle, automatically approving and assigning driver")
-            # Automatically approve vehicle reservations
-            reservation.status = 'active'
+            logger.info("Ride type is vehicle, automatically assigning driver")
+            # Automatically assign vehicle reservations
+            reservation.status = 'pending'
             # Check if route_id is provided in the request data
             route_id = self.request.data.get('route_id')
             logger.info(f"Route ID provided: {route_id}")
@@ -787,14 +787,23 @@ class DriverReservationsView(APIView):
         try:
             profile = user.driver_profile
             reservations = Reservation.objects.filter(
-                driver=profile, 
+                driver=profile,
                 ride_type='vehicle',
-                status__in=['active', 'paid']
+                status__in=['pending', 'active', 'paid', 'completed']
             ).select_related('user', 'route').order_by('-created_at')
             serializer = ReservationSerializer(reservations, many=True, context={'request': request})
             return Response({"reservations": serializer.data}, status=status.HTTP_200_OK)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CompletedReservationsView(ListCreateAPIView):
+    serializer_class = ReservationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Reservation.objects.filter(user=user, status='completed').order_by('-created_at')
 
 
 class ReservationDetailView(RetrieveUpdateDestroyAPIView):

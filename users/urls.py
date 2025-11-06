@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView
+from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView
 
 urlpatterns = [
     path('initiate-signup/', InitiateSignupView.as_view(), name='initiate-signup'),
@@ -33,4 +33,5 @@ urlpatterns = [
     path('all-withdrawal-requests/', ListAllWithdrawalRequestsView.as_view(), name='all-withdrawal-requests'),
     path('process-withdrawal/<int:withdrawal_id>/', ProcessWithdrawalRequestView.as_view(), name='process-withdrawal'),
     path('driver-reservations/', DriverReservationsView.as_view(), name='driver-reservations'),
+    path('completed-reservations/', CompletedReservationsView.as_view(), name='completed-reservations'),
 ]
