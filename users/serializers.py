@@ -254,6 +254,7 @@ class SearchRouteSerializer(serializers.ModelSerializer):
 
 class ReservationSerializer(serializers.ModelSerializer):
     time = serializers.TimeField(required=False, allow_null=True)
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = Reservation
