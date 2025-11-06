@@ -770,8 +770,37 @@ class ReservationListCreateView(ListCreateAPIView):
             reservation.save()
             logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
         else:
+            # This block was missing from the original logic.
+            # If a driver is assigned, the status should become 'active'.
+            if reservation.ride_type == 'vehicle' and reservation.driver is not None:
+                reservation.status = 'active'
             logger.info("Not assigning driver: either not vehicle or not paid")
             reservation.save()
+
+        if reservation.ride_type == 'vehicle' and reservation.driver is not None:
+            reservation.status = 'active'
+            reservation.save()
+
+
+class DriverReservationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their reservations"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            reservations = Reservation.objects.filter(
+                driver=profile, 
+                ride_type='vehicle',
+                status__in=['active', 'paid']
+            ).select_related('user', 'route').order_by('-created_at')
+            serializer = ReservationSerializer(reservations, many=True, context={'request': request})
+            return Response({"reservations": serializer.data}, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ReservationDetailView(RetrieveUpdateDestroyAPIView):

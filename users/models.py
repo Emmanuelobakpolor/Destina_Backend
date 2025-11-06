@@ -146,7 +146,7 @@ class Route(models.Model):
 class Reservation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservations')
     ride_type = models.CharField(max_length=10, choices=[('bus', 'Bus'), ('vehicle', 'Vehicle')])
-    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('paid', 'Paid'), ('cancelled', 'Cancelled')], default='pending')
+    status = models.CharField(max_length=10, choices=[('pending', 'Pending'), ('active', 'Active'), ('paid', 'Paid'), ('cancelled', 'Cancelled')], default='pending')
     pickup_location = models.CharField(max_length=255)
     destination = models.CharField(max_length=255)
     reservation_seats = models.CharField(max_length=255)  # e.g., '1B, 2C'
