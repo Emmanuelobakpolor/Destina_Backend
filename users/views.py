@@ -2,17 +2,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer, NotificationSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 import random
-from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest
+from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 import requests
 from django.conf import settings
 from django.utils import timezone
 from datetime import date
 import logging
+
 
 from users import serializers
 
@@ -682,7 +683,7 @@ class ReservationListCreateView(ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Reservation.objects.filter(user=user)
+        return Reservation.objects.filter(user=user).order_by('-created_at')
 
     def perform_create(self, serializer):
         logger.info("Starting reservation creation")
@@ -771,6 +772,15 @@ class ReservationListCreateView(ListCreateAPIView):
 
             reservation.save()
             logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
+
+            # Create notification for the driver if assigned
+            if driver:
+                Notification.objects.create(
+                    driver_profile=driver,
+                    message=f"New reservation: {reservation.user.full_name} booked a ride from {reservation.pickup_location} to {reservation.destination}",
+                    type='reservation'
+                )
+                logger.info(f"Notification created for driver {driver.user.email}")
         else:
             logger.info("Not a vehicle reservation, keeping status as is")
             reservation.save()
@@ -1122,3 +1132,44 @@ class ProcessWithdrawalRequestView(APIView):
             withdrawal.notes = request.data.get('notes', '')
             withdrawal.save()
             return Response({"message": "Withdrawal request rejected"}, status=status.HTTP_200_OK)
+
+
+class ListNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their notifications"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            notifications = Notification.objects.filter(driver_profile=profile).order_by('-created_at')
+            serializer = NotificationSerializer(notifications, many=True, context={'request': request})
+            unread_count = notifications.filter(is_read=False).count()
+            return Response({
+                "notifications": serializer.data,
+                "unread_count": unread_count
+            }, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class MarkNotificationReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, notification_id):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can mark notifications as read"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            notification = Notification.objects.get(id=notification_id, driver_profile=profile)
+            notification.is_read = True
+            notification.save()
+            return Response({"message": "Notification marked as read"}, status=status.HTTP_200_OK)
+        except Notification.DoesNotExist:
+            return Response({"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)

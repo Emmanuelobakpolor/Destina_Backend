@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest
+from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification
 from datetime import timedelta
 
 class UserSerializer(serializers.ModelSerializer):
@@ -267,6 +267,13 @@ class FlutterwaveSubaccountSerializer(serializers.ModelSerializer):
         model = FlutterwaveSubaccount
         fields = ['id', 'driver_profile', 'subaccount_id', 'account_reference', 'account_name', 'account_number', 'bank_code', 'bank_name', 'created_at', 'updated_at']
         read_only_fields = ['id', 'driver_profile', 'subaccount_id', 'account_reference', 'created_at', 'updated_at']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'driver_profile', 'message', 'type', 'is_read', 'created_at']
+        read_only_fields = ['id', 'driver_profile', 'created_at']
 
 
 class WithdrawalRequestSerializer(serializers.ModelSerializer):
