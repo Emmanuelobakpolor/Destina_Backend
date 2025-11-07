@@ -954,7 +954,6 @@ class CreateFlutterwaveSubaccountView(APIView):
                     subaccount = FlutterwaveSubaccount.objects.create(
                         driver_profile=profile,
                         subaccount_id=response_data['data']['subaccount_id'],
-                        account_reference=response_data['data']['account_reference'],
                         account_name=serializer.validated_data['account_name'],
                         account_number=serializer.validated_data['account_number'],
                         bank_code=serializer.validated_data['bank_code'],

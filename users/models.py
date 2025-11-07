@@ -172,7 +172,7 @@ class Reservation(models.Model):
 class FlutterwaveSubaccount(models.Model):
     driver_profile = models.OneToOneField(DriverProfile, on_delete=models.CASCADE, related_name='flutterwave_subaccount')
     subaccount_id = models.CharField(max_length=100, blank=True, null=True)  # Flutterwave subaccount ID
-    account_reference = models.CharField(max_length=100, unique=True)  # Unique reference for the subaccount
+    account_reference = models.CharField(max_length=100, blank=True, null=True)  # Unique reference for the subaccount
     account_name = models.CharField(max_length=255)  # Bank account name
     account_number = models.CharField(max_length=20)  # Bank account number
     bank_code = models.CharField(max_length=10)  # Bank code (e.g., 058 for GTBank)
