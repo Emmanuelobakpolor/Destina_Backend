@@ -912,6 +912,8 @@ class CreateFlutterwaveSubaccountView(APIView):
                 return Response({"error": "Subaccount already exists for this driver"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Create subaccount via Flutterwave API
+            # Note: split_value is set to 0 so all funds go to main account
+            # Main account controls disbursements to driver subaccounts
             subaccount_data = {
                 "account_bank": serializer.validated_data['bank_code'],
                 "account_number": serializer.validated_data['account_number'],
@@ -923,7 +925,7 @@ class CreateFlutterwaveSubaccountView(APIView):
                 "country": "NG",  # Assuming Nigeria, adjust as needed
                 "meta": [{"metaname": "Driver ID", "metavalue": str(profile.id)}],
                 "split_type": "percentage",
-                "split_value": 0.1  # 10% commission, adjust as needed
+                "split_value": 0.0  # 0% commission - all funds go to main account
             }
 
             headers = {
