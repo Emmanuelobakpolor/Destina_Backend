@@ -896,6 +896,7 @@ class CreateFlutterwaveSubaccountView(APIView):
     # permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        logger.info(f"CreateFlutterwaveSubaccount request data: {request.data}")
         user_id = request.data.get('user_id')
         if not user_id:
             return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -969,7 +970,9 @@ class CreateFlutterwaveSubaccountView(APIView):
                         "details": response_data
                     }, status=status.HTTP_400_BAD_REQUEST)
             except requests.RequestException as e:
+                logger.error(f"Network error during Flutterwave subaccount creation: {e}")
                 return Response({"error": "Network error while creating subaccount"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"FlutterwaveSubaccountSerializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
