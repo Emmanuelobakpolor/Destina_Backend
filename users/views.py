@@ -978,7 +978,7 @@ class CreateFlutterwaveSubaccountView(APIView):
 class GetMyFlutterwaveSubaccountView(APIView):
     # permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def post(self, request):
         user_id = request.data.get('user_id')
         if not user_id:
             return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
