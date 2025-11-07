@@ -893,10 +893,18 @@ class SearchRoutesView(APIView):
 
 
 class CreateFlutterwaveSubaccountView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        user = request.user
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
         if user.role != 'driver':
             return Response({"error": "Only drivers can create subaccounts"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -966,10 +974,18 @@ class CreateFlutterwaveSubaccountView(APIView):
 
 
 class GetMyFlutterwaveSubaccountView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
         if user.role != 'driver':
             return Response({"error": "Only drivers can access their subaccount"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -981,7 +997,7 @@ class GetMyFlutterwaveSubaccountView(APIView):
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
         except FlutterwaveSubaccount.DoesNotExist:
-            return Response({"error": "Subaccount not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"subaccount": None}, status=status.HTTP_200_OK)
 
 
 class RequestWithdrawalView(APIView):
