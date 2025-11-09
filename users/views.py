@@ -1255,8 +1255,8 @@ class FlutterwaveWebhookView(APIView):
                 # Credit driver's wallet if driver assigned
                 if reservation.driver:
                     driver_profile = reservation.driver
-                    driver_profile.wallet += reservation.amount
-                    driver_profile.save()
+                    driver_profile.user.wallet += reservation.amount
+                    driver_profile.user.save()
 
                     # Create notification for driver
                     Notification.objects.create(
@@ -1319,8 +1319,8 @@ class PaymentCallbackView(APIView):
                     # Credit driver's wallet if driver assigned
                     if reservation.driver:
                         driver_profile = reservation.driver
-                        driver_profile.wallet += reservation.amount
-                        driver_profile.save()
+                        driver_profile.user.wallet += reservation.amount
+                        driver_profile.user.save()
 
                         # Create notification for driver
                         Notification.objects.create(
