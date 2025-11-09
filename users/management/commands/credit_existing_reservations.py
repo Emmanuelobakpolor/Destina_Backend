@@ -10,11 +10,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("Starting backfill process for driver wallets..."))
 
-        # Get all paid reservations that have a driver assigned
-        paid_reservations = Reservation.objects.filter(status='paid', driver__isnull=False)
+        # Get all reservations that have a driver assigned and an amount greater than zero
+        paid_reservations = Reservation.objects.filter(driver__isnull=False, amount__gt=0)
 
         if not paid_reservations.exists():
-            self.stdout.write(self.style.WARNING("No paid reservations found to process."))
+            self.stdout.write(self.style.WARNING("No reservations with assigned drivers found to process."))
             return
 
         # Group reservations by driver profile
@@ -35,14 +35,14 @@ class Command(BaseCommand):
                 total_earnings = sum(res.amount for res in reservations)
                 todays_earnings = sum(res.amount for res in reservations if res.created_at.date() == today)
 
-                # Update the driver's profile wallet and user's today's earnings
-                driver_profile.wallet = total_earnings
-                driver_profile.user.todays_earnings = todays_earnings
+                # Atomically update the driver's profile wallet and user's today's earnings
+                driver_profile.wallet += total_earnings
+                driver_profile.user.todays_earnings += todays_earnings
                 driver_profile.save(update_fields=['wallet'])
                 driver_profile.user.save(update_fields=['todays_earnings'])
 
                 self.stdout.write(self.style.SUCCESS(
-                    f"Processed driver {driver_profile.user.email}: Total Wallet: ₦{total_earnings}, Today's Earnings: ₦{todays_earnings}"
+                    f"Credited driver {driver_profile.user.email}: Amount: ₦{total_earnings}. New Wallet Total: ₦{driver_profile.wallet}"
                 ))
                 total_credited_amount += total_earnings
 
