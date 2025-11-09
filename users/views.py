@@ -1284,10 +1284,11 @@ class PaymentCallbackView(APIView):
             return Response({"error": "Transaction reference missing"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            reservation_id = int(tx_ref)
-            reservation = Reservation.objects.get(id=reservation_id)
-        except (ValueError, Reservation.DoesNotExist):
-            return Response({"error": "Invalid reservation"}, status=status.HTTP_404_NOT_FOUND)
+            # Find the reservation by the unique payment reference
+            reservation = Reservation.objects.get(payment_reference=tx_ref)
+        except Reservation.DoesNotExist:
+            logger.error(f"PaymentCallbackView: Reservation not found for tx_ref: {tx_ref}")
+            return Response({"error": "Reservation not found for this transaction"}, status=status.HTTP_404_NOT_FOUND)
 
         # Verify payment with Flutterwave
         headers = {

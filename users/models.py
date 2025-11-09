@@ -163,7 +163,7 @@ class Reservation(models.Model):
     driver_company = models.CharField(max_length=255, blank=True, null=True)
     driver = models.ForeignKey('DriverProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations')
     route = models.ForeignKey(Route, on_delete=models.SET_NULL, null=True, blank=True)
-    payment_reference = models.CharField(max_length=100, blank=True, null=True)  # For Flutterwave payment tracking
+    payment_reference = models.CharField(max_length=100, blank=True, null=True, unique=True)  # For Flutterwave payment tracking
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
