@@ -13,6 +13,9 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import date
 import logging
+import json
+from django.db import transaction
+from .utils import verify_flutterwave_webhook_signature
 
 
 from users import serializers
@@ -1193,3 +1196,82 @@ class MarkNotificationReadView(APIView):
             return Response({"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class FlutterwaveWebhookView(APIView):
+    def post(self, request):
+        # Get raw payload and signature
+        payload = request.body.decode('utf-8')
+        signature = request.headers.get('verif-hash')
+
+        if not signature:
+            logger.warning("Flutterwave webhook received without signature")
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Verify signature
+        if not verify_flutterwave_webhook_signature(payload, signature):
+            logger.warning("Flutterwave webhook signature verification failed")
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON in Flutterwave webhook payload")
+            return Response({"error": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if payment was successful
+        if data.get('event') == 'charge.completed' and data.get('data', {}).get('status') == 'successful':
+            tx_ref = data['data'].get('tx_ref')
+            amount = data['data'].get('amount')
+
+            if not tx_ref:
+                logger.error("No tx_ref in successful Flutterwave webhook")
+                return Response({"error": "Invalid transaction reference"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                reservation_id = int(tx_ref)
+                reservation = Reservation.objects.get(id=reservation_id)
+            except (ValueError, Reservation.DoesNotExist):
+                logger.error(f"Reservation not found for tx_ref: {tx_ref}")
+                return Response({"error": "Reservation not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            # Use transaction to ensure atomicity
+            with transaction.atomic():
+                # Check if already processed
+                if reservation.status == 'paid':
+                    logger.info(f"Reservation {reservation.id} already paid, skipping")
+                    return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
+
+                # Verify amount matches
+                if float(reservation.amount) != float(amount):
+                    logger.error(f"Amount mismatch for reservation {reservation.id}: expected {reservation.amount}, got {amount}")
+                    return Response({"error": "Amount mismatch"}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Update reservation
+                reservation.status = 'paid'
+                reservation.payment_reference = tx_ref
+                reservation.save()
+
+                # Credit driver's wallet if driver assigned
+                if reservation.driver:
+                    driver_profile = reservation.driver
+                    driver_profile.wallet += reservation.amount
+                    driver_profile.save()
+
+                    # Create notification for driver
+                    Notification.objects.create(
+                        driver_profile=driver_profile,
+                        message=f"Payment received: ₦{reservation.amount} credited to your wallet for reservation #{reservation.id}",
+                        type='payment'
+                    )
+
+                    logger.info(f"Credited ₦{reservation.amount} to driver {driver_profile.user.email}'s wallet")
+
+                else:
+                    logger.warning(f"No driver assigned to reservation {reservation.id}, payment processed but no wallet credit")
+
+            return Response({"message": "Payment processed successfully"}, status=status.HTTP_200_OK)
+
+        else:
+            logger.info(f"Flutterwave webhook event not processed: {data.get('event')}")
+            return Response({"message": "Event not processed"}, status=status.HTTP_200_OK)

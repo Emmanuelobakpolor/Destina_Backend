@@ -1,3 +1,9 @@
+import hmac
+import hashlib
+import json
+from django.conf import settings
+
+
 def get_image_url(image_path):
     """
     Returns the full Cloudinary URL for a given image path.
@@ -18,3 +24,19 @@ def get_image_url(image_path):
         return image_path
     else:
         return cloudinary_base + image_path
+
+
+def verify_flutterwave_webhook_signature(payload, signature):
+    """
+    Verifies the Flutterwave webhook signature to ensure authenticity.
+
+    Args:
+        payload (str): The raw JSON payload from the webhook.
+        signature (str): The signature from the 'verif-hash' header.
+
+    Returns:
+        bool: True if signature is valid, False otherwise.
+    """
+    secret = settings.FLUTTERWAVE_SECRET_KEY.encode('utf-8')
+    expected_signature = hmac.new(secret, payload.encode('utf-8'), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected_signature, signature)
