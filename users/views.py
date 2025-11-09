@@ -1255,8 +1255,8 @@ class FlutterwaveWebhookView(APIView):
                 # Credit driver's wallet if driver assigned
                 if reservation.driver:
                     driver_profile = reservation.driver
-                    driver_profile.user.wallet += reservation.amount
-                    driver_profile.user.save()
+                    driver_profile.wallet += reservation.amount
+                    driver_profile.save()
 
                     # Create notification for driver
                     Notification.objects.create(
@@ -1265,7 +1265,7 @@ class FlutterwaveWebhookView(APIView):
                         type='payment'
                     )
 
-                    logger.info(f"Credited ₦{reservation.amount} to driver {driver_profile.user.email}'s wallet")
+                    logger.info(f"Credited ₦{reservation.amount} to driver {driver_profile.user.email}'s profile wallet")
 
                 else:
                     logger.warning(f"No driver assigned to reservation {reservation.id}, payment processed but no wallet credit")
@@ -1319,8 +1319,8 @@ class PaymentCallbackView(APIView):
                     # Credit driver's wallet if driver assigned
                     if reservation.driver:
                         driver_profile = reservation.driver
-                        driver_profile.user.wallet += reservation.amount
-                        driver_profile.user.save()
+                        driver_profile.wallet += reservation.amount
+                        driver_profile.save()
 
                         # Create notification for driver
                         Notification.objects.create(
