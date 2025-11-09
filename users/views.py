@@ -1229,16 +1229,16 @@ class FlutterwaveWebhookView(APIView):
                 return Response({"error": "Invalid transaction reference"}, status=status.HTTP_400_BAD_REQUEST)
 
             try:
-                reservation_id = int(tx_ref)
-                reservation = Reservation.objects.get(id=reservation_id)
-            except (ValueError, Reservation.DoesNotExist):
+                # Find reservation using the client-generated tx_ref
+                reservation = Reservation.objects.get(tx_ref=tx_ref)
+            except Reservation.DoesNotExist:
                 logger.error(f"Reservation not found for tx_ref: {tx_ref}")
                 return Response({"error": "Reservation not found"}, status=status.HTTP_404_NOT_FOUND)
 
             # Use transaction to ensure atomicity
             with transaction.atomic():
                 # Check if already processed
-                if reservation.status == 'paid':
+                if reservation.status in ['paid', 'completed']:
                     logger.info(f"Reservation {reservation.id} already paid, skipping")
                     return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
 
@@ -1249,7 +1249,7 @@ class FlutterwaveWebhookView(APIView):
 
                 # Update reservation
                 reservation.status = 'paid'
-                reservation.payment_reference = tx_ref
+                reservation.payment_reference = data['data'].get('flw_ref') # Store Flutterwave's reference
                 reservation.save()
 
                 # Credit driver's wallet if driver assigned
@@ -1284,8 +1284,8 @@ class PaymentCallbackView(APIView):
             return Response({"error": "Transaction reference missing"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Find the reservation by the unique payment reference
-            reservation = Reservation.objects.get(payment_reference=tx_ref)
+            # Find the reservation by the client-generated tx_ref
+            reservation = Reservation.objects.get(tx_ref=tx_ref)
         except Reservation.DoesNotExist:
             logger.error(f"PaymentCallbackView: Reservation not found for tx_ref: {tx_ref}")
             return Response({"error": "Reservation not found for this transaction"}, status=status.HTTP_404_NOT_FOUND)
@@ -1296,8 +1296,9 @@ class PaymentCallbackView(APIView):
             "Content-Type": "application/json"
         }
         try:
+            transaction_id = request.query_params.get('transaction_id')
             response = requests.get(
-                f"https://api.flutterwave.com/v3/transactions/{tx_ref}/verify",
+                f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify",
                 headers=headers
             )
             verification_data = response.json()
@@ -1308,11 +1309,11 @@ class PaymentCallbackView(APIView):
         if verification_data.get('status') == 'success' and verification_data.get('data', {}).get('status') == 'successful':
             amount = verification_data['data']['amount']
             flw_ref = verification_data['data']['flw_ref']
-            # Update reservation if not already paid
-            if reservation.status != 'paid':
+            # Update reservation if not already processed
+            if reservation.status not in ['paid', 'completed']:
                 with transaction.atomic():
                     reservation.status = 'paid'
-                    reservation.payment_reference = flw_ref
+                    reservation.payment_reference = flw_ref # Store Flutterwave's reference
                     reservation.save()
 
                     # Credit driver's wallet if driver assigned
