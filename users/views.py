@@ -1275,3 +1275,67 @@ class FlutterwaveWebhookView(APIView):
         else:
             logger.info(f"Flutterwave webhook event not processed: {data.get('event')}")
             return Response({"message": "Event not processed"}, status=status.HTTP_200_OK)
+
+
+class PaymentCallbackView(APIView):
+    def get(self, request):
+        tx_ref = request.query_params.get('tx_ref')
+        if not tx_ref:
+            return Response({"error": "Transaction reference missing"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            reservation_id = int(tx_ref)
+            reservation = Reservation.objects.get(id=reservation_id)
+        except (ValueError, Reservation.DoesNotExist):
+            return Response({"error": "Invalid reservation"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verify payment with Flutterwave
+        headers = {
+            "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
+            "Content-Type": "application/json"
+        }
+        try:
+            response = requests.get(
+                f"https://api.flutterwave.com/v3/transactions/{tx_ref}/verify",
+                headers=headers
+            )
+            verification_data = response.json()
+        except requests.RequestException as e:
+            logger.error(f"Error verifying payment: {e}")
+            return Response({"error": "Payment verification failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if verification_data.get('status') == 'success' and verification_data.get('data', {}).get('status') == 'successful':
+            amount = verification_data['data']['amount']
+            flw_ref = verification_data['data']['flw_ref']
+            # Update reservation if not already paid
+            if reservation.status != 'paid':
+                with transaction.atomic():
+                    reservation.status = 'paid'
+                    reservation.payment_reference = flw_ref
+                    reservation.save()
+
+                    # Credit driver's wallet if driver assigned
+                    if reservation.driver:
+                        driver_profile = reservation.driver
+                        driver_profile.wallet += reservation.amount
+                        driver_profile.save()
+
+                        # Create notification for driver
+                        Notification.objects.create(
+                            driver_profile=driver_profile,
+                            message=f"Payment received: ₦{reservation.amount} credited to your wallet for reservation #{reservation.id}",
+                            type='payment'
+                        )
+
+            # For mobile app, this might redirect to a deep link or show success message
+            # For now, return JSON response that the app can handle
+            return Response({
+                "message": "Payment successful",
+                "reservation_id": reservation.id,
+                "status": "paid"
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "error": "Payment verification failed",
+                "details": verification_data
+            }, status=status.HTTP_400_BAD_REQUEST)
