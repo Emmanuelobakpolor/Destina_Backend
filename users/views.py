@@ -604,7 +604,7 @@ class GetMyDriverProfileView(APIView):
                     "email": user.email,
                     "phone_number": user.phone_number,
                     "full_name": user.full_name,
-                    "wallet": float(user.wallet),
+                    "wallet": float(profile.wallet),
                     "todays_earnings": float(user.todays_earnings),
                 },
                 "profile": {
