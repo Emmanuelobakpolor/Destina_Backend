@@ -1266,9 +1266,7 @@ class DriversTodaysEarningsView(APIView):
 
 class TotalPaidReservationsView(APIView):
     def get(self, request):
-        total_income = Reservation.objects.filter(
-            status__in=['paid', 'completed']
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        total_income = Reservation.objects.aggregate(total=Sum('amount'))['total'] or 0
         return Response({
             "total_paid_reservations": float(total_income)
         }, status=status.HTTP_200_OK)
