@@ -1240,14 +1240,7 @@ class MarkNotificationReadView(APIView):
 
 class TotalDriversTodaysEarningsView(APIView):
     def get(self, request):
-        from datetime import date
-        today = date.today()
-        total_earnings = Reservation.objects.filter(
-            date=today,
-            status__in=['paid', 'completed'],
-            ride_type='vehicle',
-            driver__isnull=False
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        total_earnings = User.objects.filter(role='driver').aggregate(total=Sum('todays_earnings'))['total'] or 0
         return Response({
             "total_todays_earnings": float(total_earnings)
         }, status=status.HTTP_200_OK)
@@ -1255,25 +1248,15 @@ class TotalDriversTodaysEarningsView(APIView):
 
 class DriversTodaysEarningsView(APIView):
     def get(self, request):
-        from datetime import date
-        today = date.today()
-        earnings_data = Reservation.objects.filter(
-            date=today,
-            status__in=['paid', 'completed'],
-            ride_type='vehicle',
-            driver__isnull=False
-        ).values('driver_id').annotate(
-            earnings=Sum('amount')
-        ).order_by('-earnings')
+        drivers_data = User.objects.filter(role='driver').values('id', 'full_name', 'email', 'todays_earnings').order_by('-todays_earnings')
 
         drivers_earnings = []
-        for item in earnings_data:
-            driver_profile = DriverProfile.objects.get(id=item['driver_id'])
-            user = driver_profile.user
+        for item in drivers_data:
+            driver_name = item['full_name'] or item['email']
             drivers_earnings.append({
-                "driver_id": user.id,
-                "driver_name": user.full_name or user.email,
-                "todays_earnings": float(item['earnings'] or 0)
+                "driver_id": item['id'],
+                "driver_name": driver_name,
+                "todays_earnings": float(item['todays_earnings'] or 0)
             })
 
         return Response({
