@@ -279,5 +279,5 @@ class NotificationSerializer(serializers.ModelSerializer):
 class WithdrawalRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = WithdrawalRequest
-        fields = ['id', 'driver_profile', 'amount', 'status', 'requested_at', 'processed_at', 'notes']
+        fields = ['id', 'driver_profile', 'amount', 'reason', 'status', 'requested_at', 'processed_at', 'notes']
         read_only_fields = ['id', 'driver_profile', 'requested_at', 'processed_at', 'notes']

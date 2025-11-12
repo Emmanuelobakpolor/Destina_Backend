@@ -200,6 +200,7 @@ class Notification(models.Model):
 class WithdrawalRequest(models.Model):
     driver_profile = models.ForeignKey(DriverProfile, on_delete=models.CASCADE, related_name='withdrawal_requests')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('processed', 'Processed')],

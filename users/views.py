@@ -1033,7 +1033,8 @@ class RequestWithdrawalView(APIView):
             # Create withdrawal request
             withdrawal = WithdrawalRequest.objects.create(
                 driver_profile=profile,
-                amount=amount
+                amount=amount,
+                reason=serializer.validated_data.get('reason')
             )
 
             return Response({
