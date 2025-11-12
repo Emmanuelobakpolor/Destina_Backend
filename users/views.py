@@ -1009,25 +1009,60 @@ class RequestWithdrawalView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # Comprehensive logging for withdrawal request
+        logger.info(f"=== Withdrawal Request Started ===")
+        logger.info(f"User ID: {request.user.id}")
+        logger.info(f"User email: {request.user.email}")
+        logger.info(f"User role: {request.user.role}")
+        logger.info(f"Is authenticated: {request.user.is_authenticated}")
+        logger.info(f"Authorization header present: {'Authorization' in request.headers}")
+        if 'Authorization' in request.headers:
+            logger.info(f"Authorization header format: {request.headers['Authorization'][:20]}...")
+        
         user = request.user
+        
+        # Check if user is authenticated
+        if not user.is_authenticated:
+            logger.error(f"User is not authenticated")
+            return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Check role
         if user.role != 'driver':
+            logger.error(f"User role is '{user.role}', not 'driver'. Only drivers can request withdrawals")
             return Response({"error": "Only drivers can request withdrawals"}, status=status.HTTP_403_FORBIDDEN)
 
+        # Check driver profile
         try:
             profile = user.driver_profile
+            logger.info(f"Driver profile found. ID: {profile.id}, Wallet: ₦{profile.wallet}")
         except DriverProfile.DoesNotExist:
+            logger.error(f"Driver profile not found for user {user.id}")
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        # Log request data
+        logger.info(f"Request data: {request.data}")
+        
         serializer = WithdrawalRequestSerializer(data=request.data)
         if serializer.is_valid():
             amount = serializer.validated_data['amount']
+            logger.info(f"Withdrawal amount: ₦{amount}")
+            logger.info(f"Driver wallet balance: ₦{profile.wallet}")
 
             # Check if driver has sufficient balance
             if profile.wallet < amount:
-                return Response({"error": "Insufficient wallet balance"}, status=status.HTTP_400_BAD_REQUEST)
+                logger.warning(f"Insufficient balance. Wallet: ₦{profile.wallet}, Requested: ₦{amount}")
+                return Response({
+                    "error": "Insufficient wallet balance",
+                    "wallet_balance": float(profile.wallet),
+                    "requested_amount": float(amount)
+                }, status=status.HTTP_400_BAD_REQUEST)
 
             # Check if subaccount exists
-            if not FlutterwaveSubaccount.objects.filter(driver_profile=profile).exists():
+            subaccount_exists = FlutterwaveSubaccount.objects.filter(driver_profile=profile).exists()
+            logger.info(f"Flutterwave subaccount exists: {subaccount_exists}")
+            
+            if not subaccount_exists:
+                logger.error(f"No Flutterwave subaccount for driver {user.email}")
                 return Response({"error": "Please create a Flutterwave subaccount first"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Create withdrawal request
@@ -1036,11 +1071,14 @@ class RequestWithdrawalView(APIView):
                 amount=amount,
                 reason=serializer.validated_data.get('reason')
             )
+            logger.info(f"Withdrawal request created. ID: {withdrawal.id}, Status: {withdrawal.status}")
 
             return Response({
                 "message": "Withdrawal request submitted successfully",
                 "withdrawal": WithdrawalRequestSerializer(withdrawal).data
             }, status=status.HTTP_201_CREATED)
+        
+        logger.error(f"Serializer validation failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
