@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView
+from .views import GetMyDriverProfileView, InitiateSignupView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView
 
 
 urlpatterns = [
@@ -20,6 +20,8 @@ urlpatterns = [
     path('user-stats/', UserStatsView.as_view(), name='user-stats'),
     path('list-users/', ListUsersView.as_view(), name='list-users'),
     path('list-drivers/', ListDriversView.as_view(), name='list-drivers'),
+    path('drivers/total-todays-earnings/', TotalDriversTodaysEarningsView.as_view(), name='total-drivers-todays-earnings'),
+    path('drivers/todays-earnings/', DriversTodaysEarningsView.as_view(), name='drivers-todays-earnings'),
     path('driver-profile/<int:user_id>/', GetDriverProfileView.as_view(), name='driver-profile'),
     path('my-driver-profile/', GetMyDriverProfileView.as_view(), name='my-driver-profile'),
     path('routes/', RouteListCreateView.as_view(), name='route-list-create'),

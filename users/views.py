@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer, NotificationSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Sum
 import random
 from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -1235,6 +1236,49 @@ class MarkNotificationReadView(APIView):
             return Response({"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class TotalDriversTodaysEarningsView(APIView):
+    def get(self, request):
+        from datetime import date
+        today = date.today()
+        total_earnings = Reservation.objects.filter(
+            date=today,
+            status__in=['paid', 'completed'],
+            ride_type='vehicle',
+            driver__isnull=False
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        return Response({
+            "total_todays_earnings": float(total_earnings)
+        }, status=status.HTTP_200_OK)
+
+
+class DriversTodaysEarningsView(APIView):
+    def get(self, request):
+        from datetime import date
+        today = date.today()
+        earnings_data = Reservation.objects.filter(
+            date=today,
+            status__in=['paid', 'completed'],
+            ride_type='vehicle',
+            driver__isnull=False
+        ).values('driver_id').annotate(
+            earnings=Sum('amount')
+        ).order_by('-earnings')
+
+        drivers_earnings = []
+        for item in earnings_data:
+            driver_profile = DriverProfile.objects.get(id=item['driver_id'])
+            user = driver_profile.user
+            drivers_earnings.append({
+                "driver_id": user.id,
+                "driver_name": user.full_name or user.email,
+                "todays_earnings": float(item['earnings'] or 0)
+            })
+
+        return Response({
+            "drivers_earnings": drivers_earnings
+        }, status=status.HTTP_200_OK)
 
 
 class FlutterwaveWebhookView(APIView):
