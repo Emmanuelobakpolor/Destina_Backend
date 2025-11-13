@@ -1088,8 +1088,7 @@ class ListMyWithdrawalRequestsView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role != 'driver':
-            return Response({"error": "Only drivers can access their withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
+       
 
         try:
             profile = user.driver_profile
@@ -1105,8 +1104,7 @@ class ListAllWithdrawalRequestsView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can access all withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
+        
 
         withdrawals = WithdrawalRequest.objects.all().order_by('-requested_at')
         serializer = WithdrawalRequestSerializer(withdrawals, many=True)
@@ -1118,8 +1116,7 @@ class ProcessWithdrawalRequestView(APIView):
 
     def post(self, request, withdrawal_id):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can process withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
+        
 
         try:
             withdrawal = WithdrawalRequest.objects.get(id=withdrawal_id)
