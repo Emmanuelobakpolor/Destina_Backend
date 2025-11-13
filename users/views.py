@@ -17,6 +17,8 @@ import logging
 import json
 from django.db import transaction
 from .utils import verify_flutterwave_webhook_signature
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 
 from users import serializers
@@ -1277,11 +1279,14 @@ class TotalPaidReservationsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class FlutterwaveWebhookView(APIView):
     def post(self, request):
         # Get raw payload and signature
         payload = request.body.decode('utf-8')
         signature = request.headers.get('verif-hash')
+
+        logger.info(f"Flutterwave webhook received. Payload length: {len(payload)}, Signature: {signature}")
 
         if not signature:
             logger.warning("Flutterwave webhook received without signature")
