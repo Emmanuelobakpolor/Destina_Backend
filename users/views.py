@@ -1323,8 +1323,8 @@ class FlutterwaveWebhookView(APIView):
                 reservation.payment_reference = data['data'].get('flw_ref') # Store Flutterwave's reference
                 reservation.save()
 
-                # Credit driver's wallet if driver assigned
-                if reservation.driver:
+                # Credit driver's wallet if driver assigned and ride_type is not 'bus'
+                if reservation.driver and reservation.ride_type != 'bus':
                     driver_profile = reservation.driver
                     driver_profile.wallet += reservation.amount
                     driver_profile.save()
@@ -1337,6 +1337,9 @@ class FlutterwaveWebhookView(APIView):
                     )
 
                     logger.info(f"Credited ₦{reservation.amount} to driver {driver_profile.user.email}'s profile wallet")
+
+                elif reservation.ride_type == 'bus':
+                    logger.info(f"Bus reservation {reservation.id} paid successfully, no wallet credit (Flutterwave retains funds)")
 
                 else:
                     logger.warning(f"No driver assigned to reservation {reservation.id}, payment processed but no wallet credit")
