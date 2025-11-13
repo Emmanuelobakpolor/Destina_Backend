@@ -692,26 +692,40 @@ class ReservationListCreateView(ListCreateAPIView):
         user = self.request.user
         return Reservation.objects.filter(user=user).order_by('-created_at')
 
+    def create(self, request, *args, **kwargs):
+        logger.info(f"Reservation creation request data: {request.data}")
+        # Extract route_id if present, as it's not in serializer
+        self.route_id = request.data.get('route_id')
+        request_data = request.data.copy()
+        if 'route_id' in request_data:
+            del request_data['route_id']
+        serializer = self.get_serializer(data=request_data)
+        if not serializer.is_valid():
+            logger.error(f"Reservation serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         logger.info("Starting reservation creation")
         # Generate tx_ref if not provided
-        if not self.request.data.get('tx_ref'):
+        request_data = self.request.data
+        if not request_data.get('tx_ref'):
             import uuid
             tx_ref = f"ref_{uuid.uuid4().hex[:8].upper()}"
             logger.info(f"Generated tx_ref: {tx_ref}")
         else:
-            tx_ref = self.request.data['tx_ref']
+            tx_ref = request_data['tx_ref']
         reservation = serializer.save(user=self.request.user, tx_ref=tx_ref)
         logger.info(f"Reservation created with ID: {reservation.id}, tx_ref: {tx_ref}, ride_type: {reservation.ride_type}")
-        status = self.request.data.get('status', 'pending')
-        reservation.status = status
-        logger.info(f"Setting status to: {status}")
+        status_value = request_data.get('status', 'pending')
+        reservation.status = status_value
+        logger.info(f"Setting status to: {status_value}")
         if reservation.ride_type == 'vehicle':
             logger.info("Ride type is vehicle, automatically assigning driver")
             # Automatically assign vehicle reservations
             reservation.status = 'pending'
             # Check if route_id is provided in the request data
-            route_id = self.request.data.get('route_id')
+            route_id = getattr(self, 'route_id', None)
             logger.info(f"Route ID provided: {route_id}")
             driver = None
             if route_id:
