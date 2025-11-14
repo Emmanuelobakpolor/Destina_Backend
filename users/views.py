@@ -785,8 +785,14 @@ class ReservationListCreateView(ListCreateAPIView):
             reservation.save()
             logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
 
-            # Create notification for the driver if assigned
+            # Credit todays_earnings for the driver if assigned (for pending vehicle reservations)
             if driver:
+                driver_user = driver.user
+                driver_user.todays_earnings += reservation.amount
+                driver_user.save()
+                logger.info(f"Credited todays_earnings for driver {driver_user.email} by ₦{reservation.amount} to {driver_user.todays_earnings} (pending reservation)")
+
+                # Create notification for the driver
                 Notification.objects.create(
                     driver_profile=driver,
                     message=f"New reservation: {reservation.user.full_name} booked a ride from {reservation.pickup_location} to {reservation.destination}",
@@ -1326,6 +1332,7 @@ class FlutterwaveWebhookView(APIView):
                     logger.error(f"Amount mismatch for reservation {reservation.id}: expected {reservation.amount}, got {amount}")
                     return Response({"error": "Amount mismatch"}, status=status.HTTP_400_BAD_REQUEST)
 
+                was_pending = reservation.status == 'pending'
                 # Update reservation
                 reservation.status = 'paid'
                 reservation.payment_reference = data['data'].get('flw_ref') # Store Flutterwave's reference
@@ -1336,6 +1343,13 @@ class FlutterwaveWebhookView(APIView):
                     driver_profile = reservation.driver
                     driver_profile.wallet += reservation.amount
                     driver_profile.save()
+
+                    # Update todays_earnings only if it was pending (to avoid double-credit on confirmation)
+                    if was_pending:
+                        driver_user = driver_profile.user
+                        driver_user.todays_earnings += reservation.amount
+                        driver_user.save()
+                        logger.info(f"Updated todays_earnings for driver {driver_user.email} by ₦{reservation.amount} to {driver_user.todays_earnings} (confirmed from pending)")
 
                     # Create notification for driver
                     Notification.objects.create(
@@ -1436,3 +1450,40 @@ class PaymentCallbackView(APIView):
             "flw_ref": v.get("flw_ref"),
             "reservation_found": True if reservation else False
         }, status=200)
+
+
+class RefreshDriverEarningsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        if user.role == 'driver':
+            target_user = user
+        elif user.role == 'admin':
+            user_id = request.data.get('user_id')
+            if not user_id:
+                return Response({"error": "user_id is required for admins"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                target_user = User.objects.get(id=user_id, role='driver')
+            except User.DoesNotExist:
+                return Response({"error": "Driver not found"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"error": "Only drivers and admins can refresh earnings"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            target_profile = target_user.driver_profile
+            total_earnings = Reservation.objects.filter(
+                driver=target_profile,
+                status__in=['pending', 'paid'],
+                ride_type='vehicle'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            target_user.todays_earnings = total_earnings
+            target_user.save()
+            logger.info(f"Refreshed todays_earnings for driver {target_user.email} to {total_earnings}")
+            return Response({
+                "message": "Earnings refreshed successfully",
+                "todays_earnings": float(target_user.todays_earnings)
+            }, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
