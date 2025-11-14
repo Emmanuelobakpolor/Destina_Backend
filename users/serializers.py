@@ -277,7 +277,16 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class WithdrawalRequestSerializer(serializers.ModelSerializer):
+    subaccount = serializers.SerializerMethodField()
+
     class Meta:
         model = WithdrawalRequest
-        fields = ['id', 'driver_profile', 'amount', 'reason', 'status', 'requested_at', 'processed_at', 'notes']
-        read_only_fields = ['id', 'driver_profile', 'requested_at', 'processed_at', 'notes']
+        fields = ['id', 'driver_profile', 'amount', 'reason', 'status', 'requested_at', 'processed_at', 'notes', 'subaccount']
+        read_only_fields = ['id', 'driver_profile', 'requested_at', 'processed_at', 'notes', 'subaccount']
+
+    def get_subaccount(self, obj):
+        try:
+            subaccount = obj.driver_profile.flutterwave_subaccount
+            return FlutterwaveSubaccountSerializer(subaccount).data
+        except FlutterwaveSubaccount.DoesNotExist:
+            return None
