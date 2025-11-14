@@ -15,10 +15,8 @@ from django.utils import timezone
 from datetime import date
 import logging
 import json
-from django.db import transaction, IntegrityError
+from django.db import transaction
 from .utils import verify_flutterwave_webhook_signature
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
 
 from users import serializers
@@ -692,50 +690,26 @@ class ReservationListCreateView(ListCreateAPIView):
         user = self.request.user
         return Reservation.objects.filter(user=user).order_by('-created_at')
 
-    def create(self, request, *args, **kwargs):
-        logger.info(f"Reservation creation request data: {request.data}")
-        # Extract route_id if present, as it's not in serializer
-        self.route_id = request.data.get('route_id')
-        request_data = request.data.copy()
-        if 'route_id' in request_data:
-            del request_data['route_id']
-        # Map selected_seats to reservation_seats for bus rides (as string)
-        if 'selected_seats' in request_data:
-            request_data['reservation_seats'] = request_data.pop('selected_seats')
-        # Map pending_payment to pending for status validation
-        if request_data.get('status') == 'pending_payment':
-            request_data['status'] = 'pending'
-        serializer = self.get_serializer(data=request_data)
-        if not serializer.is_valid():
-            logger.error(f"Reservation serializer errors: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            return super().create(request, *args, **kwargs)
-        except IntegrityError:
-            logger.error("Duplicate reservation attempt")
-            return Response({"error": "Reservation with this transaction reference already exists"}, status=status.HTTP_400_BAD_REQUEST)
-
     def perform_create(self, serializer):
         logger.info("Starting reservation creation")
         # Generate tx_ref if not provided
-        request_data = self.request.data
-        if not request_data.get('tx_ref'):
+        if not self.request.data.get('tx_ref'):
             import uuid
             tx_ref = f"ref_{uuid.uuid4().hex[:8].upper()}"
             logger.info(f"Generated tx_ref: {tx_ref}")
         else:
-            tx_ref = request_data['tx_ref']
+            tx_ref = self.request.data['tx_ref']
         reservation = serializer.save(user=self.request.user, tx_ref=tx_ref)
         logger.info(f"Reservation created with ID: {reservation.id}, tx_ref: {tx_ref}, ride_type: {reservation.ride_type}")
-        status_value = request_data.get('status', 'pending')
-        reservation.status = status_value
-        logger.info(f"Setting status to: {status_value}")
+        status = self.request.data.get('status', 'pending')
+        reservation.status = status
+        logger.info(f"Setting status to: {status}")
         if reservation.ride_type == 'vehicle':
             logger.info("Ride type is vehicle, automatically assigning driver")
             # Automatically assign vehicle reservations
             reservation.status = 'pending'
             # Check if route_id is provided in the request data
-            route_id = getattr(self, 'route_id', None)
+            route_id = self.request.data.get('route_id')
             logger.info(f"Route ID provided: {route_id}")
             driver = None
             if route_id:
@@ -1303,14 +1277,11 @@ class TotalPaidReservationsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
 class FlutterwaveWebhookView(APIView):
     def post(self, request):
         # Get raw payload and signature
         payload = request.body.decode('utf-8')
         signature = request.headers.get('verif-hash')
-
-        logger.info(f"Flutterwave webhook received. Payload length: {len(payload)}, Signature: {signature}")
 
         if not signature:
             logger.warning("Flutterwave webhook received without signature")

@@ -255,8 +255,6 @@ class SearchRouteSerializer(serializers.ModelSerializer):
 class ReservationSerializer(serializers.ModelSerializer):
     time = serializers.TimeField(required=False, allow_null=True)
     user = UserSerializer(read_only=True)
-    reservation_seats = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    payment_reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Reservation
