@@ -785,14 +785,8 @@ class ReservationListCreateView(ListCreateAPIView):
             reservation.save()
             logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
 
-            # Credit todays_earnings for the driver if assigned (for pending vehicle reservations)
+            # Create notification for the driver if assigned
             if driver:
-                driver_user = driver.user
-                driver_user.todays_earnings += reservation.amount
-                driver_user.save()
-                logger.info(f"Credited todays_earnings for driver {driver_user.email} by ₦{reservation.amount} to {driver_user.todays_earnings} (pending reservation)")
-
-                # Create notification for the driver
                 Notification.objects.create(
                     driver_profile=driver,
                     message=f"New reservation: {reservation.user.full_name} booked a ride from {reservation.pickup_location} to {reservation.destination}",
@@ -1332,7 +1326,6 @@ class FlutterwaveWebhookView(APIView):
                     logger.error(f"Amount mismatch for reservation {reservation.id}: expected {reservation.amount}, got {amount}")
                     return Response({"error": "Amount mismatch"}, status=status.HTTP_400_BAD_REQUEST)
 
-                was_pending = reservation.status == 'pending'
                 # Update reservation
                 reservation.status = 'paid'
                 reservation.payment_reference = data['data'].get('flw_ref') # Store Flutterwave's reference
@@ -1344,12 +1337,11 @@ class FlutterwaveWebhookView(APIView):
                     driver_profile.wallet += reservation.amount
                     driver_profile.save()
 
-                    # Update todays_earnings only if it was pending (to avoid double-credit on confirmation)
-                    if was_pending:
-                        driver_user = driver_profile.user
-                        driver_user.todays_earnings += reservation.amount
-                        driver_user.save()
-                        logger.info(f"Updated todays_earnings for driver {driver_user.email} by ₦{reservation.amount} to {driver_user.todays_earnings} (confirmed from pending)")
+                    # Update todays_earnings for the driver
+                    driver_user = driver_profile.user
+                    driver_user.todays_earnings += reservation.amount
+                    driver_user.save()
+                    logger.info(f"Updated todays_earnings for driver {driver_user.email} by ₦{reservation.amount} to {driver_user.todays_earnings}")
 
                     # Create notification for driver
                     Notification.objects.create(
@@ -1475,7 +1467,7 @@ class RefreshDriverEarningsView(APIView):
             target_profile = target_user.driver_profile
             total_earnings = Reservation.objects.filter(
                 driver=target_profile,
-                status__in=['pending', 'paid'],
+                status='paid',
                 ride_type='vehicle'
             ).aggregate(total=Sum('amount'))['total'] or 0
             target_user.todays_earnings = total_earnings

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetMyDriverProfileView, InitiateSignupView, TotalPaidReservationsView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView, RefreshDriverEarningsView
+from .views import GetMyDriverProfileView, InitiateSignupView, TotalPaidReservationsView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView
 
 
 urlpatterns = [
@@ -42,6 +42,5 @@ urlpatterns = [
     path('mark-notification-read/<int:notification_id>/', MarkNotificationReadView.as_view(), name='mark-notification-read'),
     path('flutterwave-webhook/', FlutterwaveWebhookView.as_view(), name='flutterwave-webhook'),
     path('payment-callback/', PaymentCallbackView.as_view(), name='payment-callback'),
-    path('refresh-earnings/', RefreshDriverEarningsView.as_view(), name='refresh-earnings'),
 
 ]
