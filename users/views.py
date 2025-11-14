@@ -17,6 +17,7 @@ import logging
 import json
 from django.db import transaction
 from .utils import verify_flutterwave_webhook_signature
+from django.shortcuts import render
 
 
 from users import serializers
@@ -1367,36 +1368,33 @@ class FlutterwaveWebhookView(APIView):
 
 class PaymentCallbackView(APIView):
     permission_classes = []  # No authentication for callbacks
+    template_name = 'payment_callback.html'
 
     def get(self, request):
-        return self.handle_callback(request)
+        return render(request, self.template_name, {'request': request})
 
     def post(self, request):
-        return self.handle_callback(request)
+        response_dict = self.handle_callback(request)
+        context = {
+            'request': request,
+            'response': response_dict,
+            'json_response': json.dumps(response_dict)
+        }
+        return render(request, self.template_name, context)
 
     def handle_callback(self, request):
-        tx_ref = (
-            request.query_params.get('tx_ref')
-            or request.data.get('tx_ref')
-            or None
-        )
-
-        flw_ref = (
-            request.query_params.get('flw_ref')
-            or request.data.get('flw_ref')
-            or None
-        )
-
-        transaction_id = (
-            request.query_params.get('transaction_id')
-            or request.data.get('transaction_id')
-        )
+        if request.method == 'GET':
+            tx_ref = request.query_params.get('tx_ref') or None
+            transaction_id = request.query_params.get('transaction_id') or None
+        else:  # POST
+            tx_ref = request.POST.get('tx_ref') or None
+            transaction_id = request.POST.get('transaction_id') or None
 
         if not transaction_id:
-            return Response({
+            return {
                 "status": "failed",
                 "message": "transaction_id missing"
-            }, status=400)
+            }
 
         # Verify payment with Flutterwave
         headers = {
@@ -1412,10 +1410,10 @@ class PaymentCallbackView(APIView):
 
         # If verification fails, still return success (your requirement)
         if data.get("status") != "success":
-            return Response({
+            return {
                 "status": "success",
                 "message": "Payment processed (verification mismatch ignored)",
-            }, status=200)
+            }
 
         v = data["data"]
 
@@ -1435,13 +1433,13 @@ class PaymentCallbackView(APIView):
             # Log but DO NOT return error
             logger.warning(f"Callback: Reservation NOT FOUND for tx_ref={tx_ref}, but payment verified.")
 
-        return Response({
+        return {
             "status": "success",
             "message": "Payment successful",
             "tx_ref": tx_ref,
             "flw_ref": v.get("flw_ref"),
             "reservation_found": True if reservation else False
-        }, status=200)
+        }
 
 
 class RefreshDriverEarningsView(APIView):
