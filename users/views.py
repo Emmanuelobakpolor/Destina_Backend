@@ -15,7 +15,7 @@ from django.utils import timezone
 from datetime import date
 import logging
 import json
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from .utils import verify_flutterwave_webhook_signature
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -699,9 +699,9 @@ class ReservationListCreateView(ListCreateAPIView):
         request_data = request.data.copy()
         if 'route_id' in request_data:
             del request_data['route_id']
-        # Map selected_seats to reservation_seats for bus rides
+        # Map selected_seats to reservation_seats for bus rides (as list)
         if 'selected_seats' in request_data:
-            request_data['reservation_seats'] = request_data.pop('selected_seats')
+            request_data['reservation_seats'] = [request_data.pop('selected_seats')]
         # Map pending_payment to pending for status validation
         if request_data.get('status') == 'pending_payment':
             request_data['status'] = 'pending'
@@ -709,7 +709,11 @@ class ReservationListCreateView(ListCreateAPIView):
         if not serializer.is_valid():
             logger.error(f"Reservation serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return super().create(request, *args, **kwargs)
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            logger.error("Duplicate reservation attempt")
+            return Response({"error": "Reservation with this transaction reference already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
         logger.info("Starting reservation creation")
