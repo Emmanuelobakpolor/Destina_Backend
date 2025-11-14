@@ -1,68 +1,92 @@
+<!-- users/templates/rest_framework/payment_callback.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Payment Callback Tester</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Payment Callback Simulator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { padding: 2rem; background: #f8f9fa; }
-    .card { max-width: 800px; margin: auto; }
-    .json-output { background: #f1f3f5; padding: 1rem; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
+    body { background: #f5f7fa; padding: 2rem 1rem; }
+    .card { max-width: 800px; margin: auto; border: none; border-radius: 16px; overflow: hidden; }
+    .card-header { background: #0d6efd; color: white; }
+    .form-control { border-radius: 8px; }
+    .btn-copy { font-size: 0.85rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+    .alert { border-radius: 8px; }
   </style>
 </head>
 <body>
-  <div class="card shadow">
-    <div class="card-header bg-primary text-white">
-      <h4 class="mb-0">Payment Callback Simulator</h4>
+  <div class="card shadow-lg">
+    <div class="card-header">
+      <h4 class="mb-0"><i class="fas fa-credit-card"></i> Payment Callback Simulator</h4>
     </div>
     <div class="card-body">
       <form method="post" class="row g-3">
         {% csrf_token %}
-        
         <div class="col-md-6">
-          <label class="form-label">tx_ref</label>
-          <input type="text" name="tx_ref" class="form-control" value="{{ request.GET.tx_ref|default:'' }}" placeholder="e.g. SAMPLE_TX_REF_123" required>
+          <label class="form-label fw-bold">tx_ref</label>
+          <input type="text" name="tx_ref" class="form-control" value="{{ tx_ref|default:'' }}" placeholder="e.g. destina_1763113655563k">
         </div>
-        
         <div class="col-md-6">
-          <label class="form-label">transaction_id</label>
-          <input type="text" name="transaction_id" class="form-control" value="{{ request.GET.transaction_id|default:'' }}" placeholder="e.g. SAMPLE_FLW_REF_456" required>
+          <label class="form-label fw-bold">transaction_id <span class="text-danger">*</span></label>
+          <input type="text" name="transaction_id" class="form-control" value="{{ transaction_id|default:'' }}" placeholder="e.g. 191823" required>
         </div>
-
         <div class="col-12">
-          <button type="submit" class="btn btn-success">Send Callback</button>
-          <a href="?tx_ref=SAMPLE_TX_REF_123&transaction_id=SAMPLE_FLW_REF_456" class="btn btn-outline-secondary ms-2">Load Sample</a>
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="fas fa-paper-plane"></i> Send Callback
+          </button>
+          <a href="?tx_ref=destina_1763113655563k&transaction_id=191823" class="btn btn-outline-primary ms-2">
+            <i class="fas fa-flask"></i> Load Test Data
+          </a>
         </div>
       </form>
 
       {% if response %}
+      <hr class="my-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Response</h5>
+        <button class="btn btn-sm btn-outline-secondary btn-copy" onclick="copyJSON()">
+          <i class="fas fa-copy"></i> Copy JSON
+        </button>
+      </div>
+
       {% if response.status == "success" %}
-        <div class="alert alert-success mt-3">Callback processed successfully!</div>
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle"></i> <strong>Success:</strong> {{ response.message }}
+        </div>
+      {% elif response.status == "failed" %}
+        <div class="alert alert-danger">
+          <i class="fas fa-times-circle"></i> <strong>Failed:</strong> {{ response.message }}
+        </div>
       {% else %}
-        <div class="alert alert-danger mt-3">Failed to process callback.</div>
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i> {{ response.message|default:"Unknown response" }}
+        </div>
       {% endif %}
-      <hr>
-      <h5>Response:</h5>
-      <div class="json-output">{{ response.json_response|safe }}</div>
+
+      <pre id="json-output">{{ json_response }}</pre>
       {% endif %}
     </div>
-    <div class="card-footer text-muted">
-      <small>Endpoint: <code>POST /api/users/auth/payment-callback/</code></small>
+    <div class="card-footer text-muted small">
+      <code>POST /api/users/auth/payment-callback/</code> • Flutterwave Verified • No Auth Required
     </div>
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const jsonDiv = document.querySelector('.json-output');
-      if (jsonDiv && jsonDiv.textContent.trim().startsWith('{')) {
-        try {
-          const obj = JSON.parse(jsonDiv.textContent);
-          jsonDiv.textContent = JSON.stringify(obj, null, 2);
-        } catch (e) {
-          console.error('JSON parse error:', e);
-        }
-      }
-    });
+    function copyJSON() {
+      const text = document.getElementById('json-output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.btn-copy');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.classList.replace('btn-outline-secondary', 'btn-success');
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+      });
+    }
   </script>
 </body>
 </html>

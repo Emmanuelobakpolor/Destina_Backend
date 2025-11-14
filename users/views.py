@@ -1366,81 +1366,100 @@ class FlutterwaveWebhookView(APIView):
             return Response({"message": "Event not processed"}, status=status.HTTP_200_OK)
 
 
+# users/views.py
+import json
+import logging
+import requests
+from django.conf import settings
+from django.shortcuts import render
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from .models import Reservation  # adjust import
+
+logger = logging.getLogger(__name__)
+
 class PaymentCallbackView(APIView):
-    permission_classes = []  # No authentication for callbacks
-    template_name = 'payment_callback.html'
+    permission_classes = [AllowAny]  # No auth needed
+    template_name = 'rest_framework/payment_callback.html'
 
     def get(self, request):
-        return render(request, self.template_name, {'request': request})
+        # Pre-fill sample values from query params (for testing)
+        context = {
+            'tx_ref': request.GET.get('tx_ref', ''),
+            'transaction_id': request.GET.get('transaction_id', ''),
+        }
+        return render(request, self.template_name, context)
 
     def post(self, request):
         response_dict = self.handle_callback(request)
         context = {
-            'request': request,
+            'tx_ref': request.POST.get('tx_ref', ''),
+            'transaction_id': request.POST.get('transaction_id', ''),
             'response': response_dict,
-            'json_response': json.dumps(response_dict)
+            'json_response': json.dumps(response_dict, indent=2),
         }
         return render(request, self.template_name, context)
 
     def handle_callback(self, request):
-        if request.method == 'GET':
-            tx_ref = request.query_params.get('tx_ref') or None
-            transaction_id = request.query_params.get('transaction_id') or None
-        else:  # POST
-            tx_ref = request.POST.get('tx_ref') or None
-            transaction_id = request.POST.get('transaction_id') or None
+        # Extract from POST or GET
+        tx_ref = (request.POST if request.method == 'POST' else request.GET).get('tx_ref')
+        transaction_id = (request.POST if request.method == 'POST' else request.GET).get('transaction_id')
 
         if not transaction_id:
-            return {
-                "status": "failed",
-                "message": "transaction_id missing"
+            return {"status": "failed", "message": "transaction_id is required"}
+
+        # Verify with Flutterwave
+        try:
+            headers = {
+                "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
+                "Content-Type": "application/json"
             }
+            resp = requests.get(
+                f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify",
+                headers=headers,
+                timeout=10
+            )
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"Flutterwave verify failed: {e}")
+            return {"status": "error", "message": "Payment gateway unreachable"}
 
-        # Verify payment with Flutterwave
-        headers = {
-            "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        verification_response = requests.get(
-            f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify",
-            headers=headers
-        )
-        data = verification_response.json()
-
-        # If verification fails, still return success (your requirement)
+        # Even if Flutterwave says failed, we accept (per your spec)
         if data.get("status") != "success":
+            logger.warning(f"Flutterwave verification failed for {transaction_id}: {data}")
             return {
                 "status": "success",
-                "message": "Payment processed (verification mismatch ignored)",
+                "message": "Payment processed (verification ignored)",
+                "flw_status": data.get("status")
             }
 
-        v = data["data"]
+        v = data.get("data", {})
 
-        # If tx_ref was not received, get from verification
+        # Use tx_ref from payload or Flutterwave
+        tx_ref = tx_ref or v.get("tx_ref")
         if not tx_ref:
-            tx_ref = v.get("tx_ref")
+            return {"status": "failed", "message": "tx_ref missing from payload and Flutterwave"}
 
-        # Try to find reservation — BUT DO NOT FAIL IF NOT FOUND
+        # Update or log reservation
         reservation = Reservation.objects.filter(tx_ref=tx_ref).first()
-
         if reservation:
-            # Update if exists
             reservation.status = "paid"
             reservation.payment_reference = v.get("flw_ref")
             reservation.save()
+            reservation_found = True
         else:
-            # Log but DO NOT return error
-            logger.warning(f"Callback: Reservation NOT FOUND for tx_ref={tx_ref}, but payment verified.")
+            logger.warning(f"Reservation NOT FOUND for tx_ref={tx_ref}")
+            reservation_found = False
 
         return {
             "status": "success",
             "message": "Payment successful",
             "tx_ref": tx_ref,
             "flw_ref": v.get("flw_ref"),
-            "reservation_found": True if reservation else False
+            "amount": v.get("amount"),
+            "currency": v.get("currency"),
+            "reservation_found": reservation_found
         }
-
 
 class RefreshDriverEarningsView(APIView):
     permission_classes = [IsAuthenticated]
