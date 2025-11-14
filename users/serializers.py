@@ -290,3 +290,30 @@ class WithdrawalRequestSerializer(serializers.ModelSerializer):
             return FlutterwaveSubaccountSerializer(subaccount).data
         except FlutterwaveSubaccount.DoesNotExist:
             return None
+
+
+class DriverEarningsSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'full_name', 'display_name', 'profile_picture', 'todays_earnings']
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture and hasattr(obj.profile_picture, 'url'):
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
+
+    def get_display_name(self, obj):
+        if obj.role == 'driver':
+            try:
+                return obj.driver_profile.first_name or obj.full_name or 'Driver'
+            except DriverProfile.DoesNotExist:
+                return obj.full_name or 'Driver'
+        return obj.full_name or 'User'
+
+
+class TotalEarningsSerializer(serializers.Serializer):
+    total_earnings = serializers.DecimalField(max_digits=10, decimal_places=2)

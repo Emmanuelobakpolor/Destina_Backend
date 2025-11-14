@@ -5,13 +5,13 @@ from users.models import Reservation, DriverProfile
 from decimal import Decimal
 
 class Command(BaseCommand):
-    help = 'Backfills driver wallets and today\'s earnings from existing paid reservations.'
+    help = 'Backfills driver total earnings from all paid reservations (no wallet updates).'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS("Starting backfill process for driver wallets..."))
+        self.stdout.write(self.style.SUCCESS("Starting backfill process for driver total earnings..."))
 
-        # Get all reservations that have a driver assigned and an amount greater than zero
-        paid_reservations = Reservation.objects.filter(driver__isnull=False, amount__gt=0)
+        # Get all paid reservations that have a driver assigned and an amount greater than zero
+        paid_reservations = Reservation.objects.filter(driver__isnull=False, amount__gt=0, status='paid')
 
         if not paid_reservations.exists():
             self.stdout.write(self.style.WARNING("No reservations with assigned drivers found to process."))
@@ -24,31 +24,27 @@ class Command(BaseCommand):
                 reservations_by_driver[r.driver_id] = []
             reservations_by_driver[r.driver_id].append(r)
 
-        today = timezone.now().date()
-        total_credited_amount = Decimal('0.0')
+        total_earnings_amount = Decimal('0.0')
 
         for driver_profile_id, reservations in reservations_by_driver.items():
             try:
                 driver_profile = DriverProfile.objects.get(id=driver_profile_id)
                 
-                # Calculate total earnings and today's earnings
+                # Calculate total earnings (all time)
                 total_earnings = sum(res.amount for res in reservations)
-                todays_earnings = sum(res.amount for res in reservations if res.created_at.date() == today)
 
-                # Atomically update the driver's profile wallet and user's today's earnings
-                driver_profile.wallet += total_earnings
-                driver_profile.user.todays_earnings += todays_earnings
-                driver_profile.save(update_fields=['wallet'])
+                # Update user's total earnings (repurposed from todays_earnings)
+                driver_profile.user.todays_earnings = total_earnings
                 driver_profile.user.save(update_fields=['todays_earnings'])
 
                 self.stdout.write(self.style.SUCCESS(
-                    f"Credited driver {driver_profile.user.email}: Amount: ₦{total_earnings}. New Wallet Total: ₦{driver_profile.wallet}"
+                    f"Updated earnings for driver {driver_profile.user.email}: Total: ₦{total_earnings}"
                 ))
-                total_credited_amount += total_earnings
+                total_earnings_amount += total_earnings
 
             except DriverProfile.DoesNotExist:
                 self.stdout.write(self.style.ERROR(f"DriverProfile with ID {driver_profile_id} not found. Skipping."))
 
         self.stdout.write(
-            self.style.SUCCESS(f"\nBackfill completed. Total amount credited across all drivers: ₦{total_credited_amount}")
+            self.style.SUCCESS(f"\nBackfill completed. Total earnings updated across all drivers: ₦{total_earnings_amount}")
         )

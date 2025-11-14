@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer, NotificationSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer, NotificationSerializer, DriverEarningsSerializer, TotalEarningsSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Sum
@@ -877,14 +877,11 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
 
                 # Credit earnings if reservation is already paid
                 if reservation.status == 'pending':
-                    driver_profile = driver
-                    driver_profile.wallet += reservation.amount
-                    driver_profile.save()
                     driver_user.todays_earnings += reservation.amount
                     driver_user.save()
                     Notification.objects.create(
                         driver_profile=driver,
-                        message=f"Payment received: ₦{reservation.amount} credited to your wallet for reservation #{reservation.id}",
+                        message=f"Payment received: ₦{reservation.amount} added to your earnings for reservation #{reservation.id}",
                         type='payment'
                     )
             else:
@@ -1260,26 +1257,16 @@ class MarkNotificationReadView(APIView):
 class TotalDriversTodaysEarningsView(APIView):
     def get(self, request):
         total_earnings = User.objects.filter(role='driver').aggregate(total=Sum('todays_earnings'))['total'] or 0
-        return Response({
-            "total_todays_earnings": float(total_earnings)
-        }, status=status.HTTP_200_OK)
+        serializer = TotalEarningsSerializer({'total_earnings': total_earnings})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class DriversTodaysEarningsView(APIView):
     def get(self, request):
-        drivers_data = User.objects.filter(role='driver').values('id', 'full_name', 'email', 'todays_earnings').order_by('-todays_earnings')
-
-        drivers_earnings = []
-        for item in drivers_data:
-            driver_name = item['full_name'] or item['email']
-            drivers_earnings.append({
-                "driver_id": item['id'],
-                "driver_name": driver_name,
-                "todays_earnings": float(item['todays_earnings'] or 0)
-            })
-
+        drivers = User.objects.filter(role='driver').order_by('-todays_earnings')
+        serializer = DriverEarningsSerializer(drivers, many=True, context={'request': request})
         return Response({
-            "drivers_earnings": drivers_earnings
+            "drivers_earnings": serializer.data
         }, status=status.HTTP_200_OK)
 
 
@@ -1345,11 +1332,9 @@ class FlutterwaveWebhookView(APIView):
                 reservation.payment_reference = data['data'].get('flw_ref') # Store Flutterwave's reference
                 reservation.save()
 
-                # Credit driver's wallet if driver assigned and ride_type is not 'bus'
+                # Credit driver's earnings if driver assigned and ride_type is not 'bus'
                 if reservation.driver and reservation.ride_type != 'bus':
                     driver_profile = reservation.driver
-                    driver_profile.wallet += reservation.amount
-                    driver_profile.save()
 
                     # Update todays_earnings for the driver
                     driver_user = driver_profile.user
@@ -1360,17 +1345,17 @@ class FlutterwaveWebhookView(APIView):
                     # Create notification for driver
                     Notification.objects.create(
                         driver_profile=driver_profile,
-                        message=f"Payment received: ₦{reservation.amount} credited to your wallet for reservation #{reservation.id}",
+                        message=f"Payment received: ₦{reservation.amount} added to your earnings for reservation #{reservation.id}",
                         type='payment'
                     )
 
-                    logger.info(f"Credited ₦{reservation.amount} to driver {driver_profile.user.email}'s profile wallet")
+                    logger.info(f"Added ₦{reservation.amount} to driver {driver_profile.user.email}'s earnings")
 
                 elif reservation.ride_type == 'bus':
-                    logger.info(f"Bus reservation {reservation.id} paid successfully, no wallet credit (Flutterwave retains funds)")
+                    logger.info(f"Bus reservation {reservation.id} paid successfully, no earnings credit (Flutterwave retains funds)")
 
                 else:
-                    logger.warning(f"No driver assigned to reservation {reservation.id}, payment processed but no wallet credit")
+                    logger.warning(f"No driver assigned to reservation {reservation.id}, payment processed but no earnings credit")
 
             return Response({"message": "Payment processed successfully"}, status=status.HTTP_200_OK)
 
@@ -1378,18 +1363,6 @@ class FlutterwaveWebhookView(APIView):
             logger.info(f"Flutterwave webhook event not processed: {data.get('event')}")
             return Response({"message": "Event not processed"}, status=status.HTTP_200_OK)
 
-
-# users/views.py
-import json
-import logging
-import requests
-from django.conf import settings
-from django.shortcuts import render
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from .models import Reservation  # adjust import
-
-logger = logging.getLogger(__name__)
 
 class PaymentCallbackView(APIView):
     permission_classes = [AllowAny]  # No auth needed
@@ -1511,9 +1484,4 @@ class RefreshDriverEarningsView(APIView):
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class AllReservationsView(ListCreateAPIView):
-    serializer_class = ReservationSerializer
-    permission_classes = [AllowAny]
 
-    def get_queryset(self):
-        return Reservation.objects.all().order_by('-created_at')
