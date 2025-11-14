@@ -699,9 +699,9 @@ class ReservationListCreateView(ListCreateAPIView):
         request_data = request.data.copy()
         if 'route_id' in request_data:
             del request_data['route_id']
-        # Map selected_seats to reservation_seats for bus rides (as list)
+        # Map selected_seats to reservation_seats for bus rides (as string)
         if 'selected_seats' in request_data:
-            request_data['reservation_seats'] = [request_data.pop('selected_seats')]
+            request_data['reservation_seats'] = request_data.pop('selected_seats')
         # Map pending_payment to pending for status validation
         if request_data.get('status') == 'pending_payment':
             request_data['status'] = 'pending'
