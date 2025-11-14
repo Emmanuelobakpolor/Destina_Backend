@@ -874,6 +874,19 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
                 reservation.vehicle_plate = driver.vehicle.plate_number if hasattr(driver, 'vehicle') and driver.vehicle else 'N/A'
                 reservation.driver_rating = 4.3
                 reservation.driver_trips = 120
+
+                # Credit earnings if reservation is already paid
+                if reservation.status == 'pending':
+                    driver_profile = driver
+                    driver_profile.wallet += reservation.amount
+                    driver_profile.save()
+                    driver_user.todays_earnings += reservation.amount
+                    driver_user.save()
+                    Notification.objects.create(
+                        driver_profile=driver,
+                        message=f"Payment received: ₦{reservation.amount} credited to your wallet for reservation #{reservation.id}",
+                        type='payment'
+                    )
             else:
                 reservation.driver_name = 'N/A (Pending Assignment)'
                 reservation.driver_phone = 'N/A'
