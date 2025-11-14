@@ -1,79 +1,251 @@
-<!-- users/templates/rest_framework/payment_callback.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Payment Callback Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Callback</title>
+
+  <!-- Bootstrap 5 + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
   <style>
-    body { background: #f5f7fa; padding: 2rem 1rem; }
-    .card { max-width: 800px; margin: auto; border: none; border-radius: 16px; overflow: hidden; }
-    .card-header { background: #0d6efd; color: white; }
-    .form-control { border-radius: 8px; }
-    .btn-copy { font-size: 0.85rem; }
-    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
-    .alert { border-radius: 8px; }
+    :root {
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #212529;
+      --border: #dee2e6;
+      --primary: #0d6efd;
+      --success: #198754;
+      --danger: #dc3545;
+      --code-bg: #1e1e1e;
+      --code-text: #d4d4d4;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --card-bg: #1e1e1e;
+        --text: #e0e0e0;
+        --border: #333;
+        --code-bg: #2d2d2d;
+        --code-text: #f0f0f0;
+      }
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 1rem;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .card {
+      max-width: 480px;
+      margin: 1rem auto;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: var(--card-bg);
+    }
+
+    .card-header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    .form-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control, .btn {
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .btn-lg {
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+    }
+
+    .btn-copy {
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+    }
+
+    .response-section {
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .json-output {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 1rem;
+      border-radius: 0.75rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .alert {
+      border-radius: 0.75rem;
+      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .footer {
+      font-size: 0.8rem;
+      text-align: center;
+      color: #6c757d;
+      margin-top: 2rem;
+    }
+
+    /* Collapsible */
+    .collapse-header {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .collapse-header i {
+      transition: transform 0.2s;
+    }
+
+    .collapse-header.collapsed i {
+      transform: rotate(-90deg);
+    }
+
+    @media (max-width: 480px) {
+      .card { margin: 0.5rem; border-radius: 0.75rem; }
+      .card-body { padding: 1.25rem; }
+      .btn-lg { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
-  <div class="card shadow-lg">
-    <div class="card-header">
-      <h4 class="mb-0"><i class="fas fa-credit-card"></i> Payment Callback Simulator</h4>
+
+  <div class="card">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="fas fa-credit-card"></i>
+      <span>Payment Callback Simulator</span>
     </div>
+
     <div class="card-body">
-      <form method="post" class="row g-3">
+      <form method="post" class="needs-validation" novalidate>
         {% csrf_token %}
-        <div class="col-md-6">
-          <label class="form-label fw-bold">tx_ref</label>
-          <input type="text" name="tx_ref" class="form-control" value="{{ tx_ref|default:'' }}" placeholder="e.g. destina_1763113655563k">
+
+        <div class="mb-3">
+          <label class="form-label">tx_ref</label>
+          <input type="text" name="tx_ref" class="form-control" value="{{ tx_ref|default:'' }}"
+                 placeholder="e.g. destina_1763113655563k">
         </div>
-        <div class="col-md-6">
-          <label class="form-label fw-bold">transaction_id <span class="text-danger">*</span></label>
-          <input type="text" name="transaction_id" class="form-control" value="{{ transaction_id|default:'' }}" placeholder="e.g. 191823" required>
+
+        <div class="mb-3">
+          <label class="form-label">transaction_id <span class="text-danger">*</span></label>
+          <input type="text" name="transaction_id" class="form-control" value="{{ transaction_id|default:'' }}"
+                 placeholder="e.g. 191823" required>
+          <div class="invalid-feedback">Please enter a transaction ID.</div>
         </div>
-        <div class="col-12">
+
+        <div class="d-grid gap-2 d-md-flex">
           <button type="submit" class="btn btn-success btn-lg">
             <i class="fas fa-paper-plane"></i> Send Callback
           </button>
-          <a href="?tx_ref=destina_1763113655563k&transaction_id=191823" class="btn btn-outline-primary ms-2">
-            <i class="fas fa-flask"></i> Load Test Data
+          <a href="?tx_ref=destina_1763113655563k&transaction_id=191823"
+             class="btn btn-outline-primary btn-lg d-flex align-items-center gap-1">
+            <i class="fas fa-flask"></i> Test Data
           </a>
         </div>
       </form>
 
+      <!-- Response Section (Collapsible on Mobile) -->
       {% if response %}
-      <hr class="my-4">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5>Response</h5>
-        <button class="btn btn-sm btn-outline-secondary btn-copy" onclick="copyJSON()">
-          <i class="fas fa-copy"></i> Copy JSON
-        </button>
+      <div class="response-section mt-4">
+        <div class="collapse-header" data-bs-toggle="collapse" data-bs-target="#responseBody"
+             aria-expanded="true">
+          <span>Response</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+
+        <div class="collapse show" id="responseBody">
+          <div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span></span>
+              <button class="btn btn-sm btn-outline-secondary btn-copy" onclick="copyJSON()">
+                <i class="fas fa-copy"></i> Copy
+              </button>
+            </div>
+
+            {% if response.status == "success" %}
+              <div class="alert alert-success d-flex align-items-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                <div><strong>Success:</strong> {{ response.message }}</div>
+              </div>
+            {% elif response.status == "failed" %}
+              <div class="alert alert-danger d-flex align-items-center gap-2">
+                <i class="fas fa-times-circle"></i>
+                <div><strong>Failed:</strong> {{ response.message }}</div>
+              </div>
+            {% else %}
+              <div class="alert alert-warning d-flex align-items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>{{ response.message|default:"Processing..." }}</div>
+              </div>
+            {% endif %}
+
+            <pre class="json-output" id="json-output">{{ json_response }}</pre>
+          </div>
+        </div>
       </div>
-
-      {% if response.status == "success" %}
-        <div class="alert alert-success">
-          <i class="fas fa-check-circle"></i> <strong>Success:</strong> {{ response.message }}
-        </div>
-      {% elif response.status == "failed" %}
-        <div class="alert alert-danger">
-          <i class="fas fa-times-circle"></i> <strong>Failed:</strong> {{ response.message }}
-        </div>
-      {% else %}
-        <div class="alert alert-warning">
-          <i class="fas fa-exclamation-triangle"></i> {{ response.message|default:"Unknown response" }}
-        </div>
-      {% endif %}
-
-      <pre id="json-output">{{ json_response }}</pre>
       {% endif %}
     </div>
-    <div class="card-footer text-muted small">
-      <code>POST /api/users/auth/payment-callback/</code> • Flutterwave Verified • No Auth Required
+
+    <div class="footer">
+      <code>POST /api/users/auth/payment-callback/</code><br>
+      Flutterwave Verified • No Auth
     </div>
   </div>
 
+  <!-- Bootstrap JS (for collapse & validation) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
   <script>
+    // Form validation
+    (() => {
+      'use strict';
+      const forms = document.querySelectorAll('.needs-validation');
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    })();
+
+    // Copy JSON
     function copyJSON() {
       const text = document.getElementById('json-output').textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -86,6 +258,15 @@
           btn.classList.replace('btn-success', 'btn-outline-secondary');
         }, 2000);
       });
+    }
+
+    // Auto-collapse on small screens
+    if (window.innerWidth <= 480) {
+      const header = document.querySelector('.collapse-header');
+      const collapse = new bootstrap.Collapse('#responseBody', { toggle: false });
+      header.classList.add('collapsed');
+      header.setAttribute('aria-expanded', 'false');
+      document.getElementById('responseBody').classList.remove('show');
     }
   </script>
 </body>
