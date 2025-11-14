@@ -387,6 +387,14 @@ class UpdateVehicleView(APIView):
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
+
+class AllReservationsView(ListCreateAPIView):
+    serializer_class = ReservationSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Reservation.objects.all().order_by('-created_at')
+
         serializer = VehicleUpdateSerializer(data=request.data)
         if serializer.is_valid():
             vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
