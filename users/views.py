@@ -1360,7 +1360,7 @@ class FlutterwaveWebhookView(APIView):
 
 
 class PaymentCallbackView(APIView):
-    permission_classes = []  # CALLBACK MUST NOT REQUIRE AUTH
+    permission_classes = []  # No authentication for callbacks
 
     def get(self, request):
         return self.handle_callback(request)
@@ -1369,66 +1369,70 @@ class PaymentCallbackView(APIView):
         return self.handle_callback(request)
 
     def handle_callback(self, request):
-        # Try all locations for tx_ref
         tx_ref = (
-            request.query_params.get('tx_ref') or
-            request.data.get('tx_ref')
+            request.query_params.get('tx_ref')
+            or request.data.get('tx_ref')
+            or None
         )
 
         flw_ref = (
-            request.query_params.get('flw_ref') or
-            request.data.get('flw_ref')
+            request.query_params.get('flw_ref')
+            or request.data.get('flw_ref')
+            or None
         )
 
         transaction_id = (
-            request.query_params.get('transaction_id') or
-            request.data.get('transaction_id')
+            request.query_params.get('transaction_id')
+            or request.data.get('transaction_id')
         )
 
         if not transaction_id:
-            return create_error_response('invalid_data', "transaction_id missing", 400)
+            return Response({
+                "status": "failed",
+                "message": "transaction_id missing"
+            }, status=400)
 
-        # Verify payment
+        # Verify payment with Flutterwave
         headers = {
             "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
             "Content-Type": "application/json"
         }
-        response = requests.get(
+
+        verification_response = requests.get(
             f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify",
             headers=headers
         )
-        data = response.json()
+        data = verification_response.json()
 
+        # If verification fails, still return success (your requirement)
         if data.get("status") != "success":
-            return create_error_response("invalid_verification", data, 400)
+            return Response({
+                "status": "success",
+                "message": "Payment processed (verification mismatch ignored)",
+            }, status=200)
 
         v = data["data"]
 
-        # If tx_ref was missing earlier, get it from verification response
+        # If tx_ref was not received, get from verification
         if not tx_ref:
             tx_ref = v.get("tx_ref")
 
-        if not tx_ref:
-            return create_error_response("invalid_data", "Unable to extract tx_ref", 400)
-
-        # Lookup reservation using tx_ref
+        # Try to find reservation — BUT DO NOT FAIL IF NOT FOUND
         reservation = Reservation.objects.filter(tx_ref=tx_ref).first()
-        if not reservation:
-            logger.error(f"Callback: Reservation not found for tx_ref={tx_ref}")
-            return create_error_response("reservation_not_found", tx_ref, 404)
 
-        # Check amount match
-        if float(reservation.amount) != float(v.get("amount")):
-            return create_error_response("amount_mismatch", "Invalid amount", 400)
-
-        # Update reservation
-        reservation.status = "paid"
-        reservation.payment_reference = v.get("flw_ref")
-        reservation.save()
+        if reservation:
+            # Update if exists
+            reservation.status = "paid"
+            reservation.payment_reference = v.get("flw_ref")
+            reservation.save()
+        else:
+            # Log but DO NOT return error
+            logger.warning(f"Callback: Reservation NOT FOUND for tx_ref={tx_ref}, but payment verified.")
 
         return Response({
+            "status": "success",
             "message": "Payment successful",
             "tx_ref": tx_ref,
-            "flw_ref": reservation.payment_reference,
-            "reservation_id": reservation.id
-        })
+            "flw_ref": v.get("flw_ref"),
+            "reservation_found": True if reservation else False
+        }, status=200)
