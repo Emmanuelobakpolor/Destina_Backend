@@ -1360,77 +1360,75 @@ class FlutterwaveWebhookView(APIView):
 
 
 class PaymentCallbackView(APIView):
+    permission_classes = []  # CALLBACK MUST NOT REQUIRE AUTH
+
     def get(self, request):
-        tx_ref = request.query_params.get('tx_ref')
-        flw_ref = request.query_params.get('flw_ref')
-        if not tx_ref and not flw_ref:
-            return create_error_response('invalid_data', "Transaction reference missing", status.HTTP_400_BAD_REQUEST)
+        return self.handle_callback(request)
 
-        reservation = None
-        lookup_ref = tx_ref or flw_ref
-        lookup_field = 'tx_ref' if tx_ref else 'payment_reference'
+    def post(self, request):
+        return self.handle_callback(request)
 
-        try:
-            # Find the reservation by tx_ref first, fallback to flw_ref (payment_reference)
-            reservation = Reservation.objects.get(**{lookup_field: lookup_ref})
-        except Reservation.DoesNotExist:
-            logger.error(f"PaymentCallbackView: Reservation not found for {lookup_field}: {lookup_ref}")
-            return create_error_response('reservation_not_found', f"{lookup_field}: {lookup_ref}", status.HTTP_404_NOT_FOUND)
+    def handle_callback(self, request):
+        # Try all locations for tx_ref
+        tx_ref = (
+            request.query_params.get('tx_ref') or
+            request.data.get('tx_ref')
+        )
 
-        # Verify payment with Flutterwave
+        flw_ref = (
+            request.query_params.get('flw_ref') or
+            request.data.get('flw_ref')
+        )
+
+        transaction_id = (
+            request.query_params.get('transaction_id') or
+            request.data.get('transaction_id')
+        )
+
+        if not transaction_id:
+            return create_error_response('invalid_data', "transaction_id missing", 400)
+
+        # Verify payment
         headers = {
             "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
             "Content-Type": "application/json"
         }
-        try:
-            transaction_id = request.query_params.get('transaction_id') or flw_ref
-            if not transaction_id:
-                return create_error_response('invalid_data', "Transaction ID missing for verification", status.HTTP_400_BAD_REQUEST)
-            response = requests.get(
-                f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify",
-                headers=headers
-            )
-            verification_data = response.json()
-        except requests.RequestException as e:
-            logger.error(f"Error verifying payment: {e}")
-            return create_error_response('network_error', str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response = requests.get(
+            f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify",
+            headers=headers
+        )
+        data = response.json()
 
-        if verification_data.get('status') == 'success' and verification_data.get('data', {}).get('status') == 'successful':
-            amount = verification_data['data']['amount']
-            stored_flw_ref = verification_data['data']['flw_ref']
-            # Verify amount matches
-            if float(reservation.amount) != float(amount):
-                logger.error(f"Amount mismatch for reservation {reservation.id}: expected {reservation.amount}, got {amount}")
-                return create_error_response('invalid_data', f"Amount mismatch: {amount} vs {reservation.amount}", status.HTTP_400_BAD_REQUEST)
-            # Update reservation if not already processed
-            if reservation.status not in ['paid', 'completed']:
-                with transaction.atomic():
-                    reservation.status = 'paid'
-                    if not reservation.payment_reference:
-                        reservation.payment_reference = stored_flw_ref  # Store Flutterwave's reference
-                    reservation.save()
+        if data.get("status") != "success":
+            return create_error_response("invalid_verification", data, 400)
 
-                    # Credit driver's wallet if driver assigned and ride_type is not 'bus'
-                    if reservation.driver and reservation.ride_type != 'bus':
-                        driver_profile = reservation.driver
-                        driver_profile.wallet += reservation.amount
-                        driver_profile.save()
+        v = data["data"]
 
-                        # Create notification for driver
-                        Notification.objects.create(
-                            driver_profile=driver_profile,
-                            message=f"Payment received: ₦{reservation.amount} credited to your wallet for reservation #{reservation.id}",
-                            type='payment'
-                        )
+        # If tx_ref was missing earlier, get it from verification response
+        if not tx_ref:
+            tx_ref = v.get("tx_ref")
 
-            # For mobile app, this might redirect to a deep link or show success message
-            # For now, return JSON response that the app can handle
-            return Response({
-                "message": "Payment successful",
-                "reservation_id": reservation.id,
-                "status": "paid",
-                "tx_ref": reservation.tx_ref,
-                "flw_ref": reservation.payment_reference
-            }, status=status.HTTP_200_OK)
-        else:
-            return create_error_response('invalid_data', verification_data, status.HTTP_400_BAD_REQUEST)
+        if not tx_ref:
+            return create_error_response("invalid_data", "Unable to extract tx_ref", 400)
+
+        # Lookup reservation using tx_ref
+        reservation = Reservation.objects.filter(tx_ref=tx_ref).first()
+        if not reservation:
+            logger.error(f"Callback: Reservation not found for tx_ref={tx_ref}")
+            return create_error_response("reservation_not_found", tx_ref, 404)
+
+        # Check amount match
+        if float(reservation.amount) != float(v.get("amount")):
+            return create_error_response("amount_mismatch", "Invalid amount", 400)
+
+        # Update reservation
+        reservation.status = "paid"
+        reservation.payment_reference = v.get("flw_ref")
+        reservation.save()
+
+        return Response({
+            "message": "Payment successful",
+            "tx_ref": tx_ref,
+            "flw_ref": reservation.payment_reference,
+            "reservation_id": reservation.id
+        })
