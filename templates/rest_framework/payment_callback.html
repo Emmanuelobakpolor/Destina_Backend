@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Payment Callback</title>
+  <title>Webhook Response Tester</title>
 
   <!-- Bootstrap 5 + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,222 +11,432 @@
 
   <style>
     :root {
-      --bg: #f8f9fa;
+      --bg: #f0f2f5;
       --card-bg: #ffffff;
       --text: #212529;
       --border: #dee2e6;
-      --primary: #0d6efd;
-      --success: #198754;
-      --danger: #dc3545;
-      --code-bg: #1e1e1e;
-      --code-text: #d4d4d4;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --code-bg: #1e293b;
+      --code-text: #e2e8f0;
+      --input-bg: #f8fafc;
+      --shadow: rgba(0, 0, 0, 0.1);
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #121212;
-        --card-bg: #1e1e1e;
-        --text: #e0e0e0;
-        --border: #333;
-        --code-bg: #2d2d2d;
-        --code-text: #f0f0f0;
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --text: #e2e8f0;
+        --border: #334155;
+        --input-bg: #0f172a;
+        --code-bg: #020617;
+        --code-text: #f1f5f9;
+        --shadow: rgba(0, 0, 0, 0.3);
       }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 1rem;
-      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      padding: 2rem 1rem;
+      min-height: 100vh;
       line-height: 1.6;
     }
 
-    .card {
-      max-width: 480px;
-      margin: 1rem auto;
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      background: var(--card-bg);
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
     }
 
-    .card-header {
-      background: var(--primary);
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: white;
-      padding: 1rem;
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.5rem;
+    }
+
+    .header p {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px var(--shadow);
+      margin-bottom: 1.5rem;
     }
 
     .card-body {
-      padding: 1.5rem;
+      padding: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
     }
 
     .form-label {
       font-weight: 600;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       margin-bottom: 0.5rem;
+      display: block;
+      color: var(--text);
     }
 
-    .form-control, .btn {
-      border-radius: 0.75rem;
+    .required {
+      color: var(--danger);
+      margin-left: 0.25rem;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: var(--card-bg);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-control::placeholder {
+      color: #94a3b8;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      border: none;
+      border-radius: 10px;
+      color: white;
       font-size: 1rem;
-      padding: 0.75rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
     }
 
-    .btn-lg {
-      padding: 0.85rem 1.5rem;
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .response-card {
+      margin-top: 2rem;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--success);
+    }
+
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #f59e0b;
+    }
+
+    .alert i {
+      font-size: 1.25rem;
+    }
+
+    .json-container {
+      position: relative;
+    }
+
+    .json-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .json-label {
+      font-size: 0.85rem;
       font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
     }
 
     .btn-copy {
+      padding: 0.5rem 1rem;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
       font-size: 0.85rem;
-      padding: 0.4rem 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
     }
 
-    .response-section {
-      margin-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      padding-top: 1rem;
+    .btn-copy:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
     }
 
     .json-output {
       background: var(--code-bg);
       color: var(--code-text);
-      padding: 1rem;
-      border-radius: 0.75rem;
-      font-family: 'Courier New', monospace;
-      font-size: 0.9rem;
+      padding: 1.25rem;
+      border-radius: 10px;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 0.85rem;
       overflow-x: auto;
       white-space: pre-wrap;
       word-wrap: break-word;
-    }
-
-    .alert {
-      border-radius: 0.75rem;
-      font-size: 0.95rem;
-      padding: 0.75rem 1rem;
+      line-height: 1.6;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .footer {
-      font-size: 0.8rem;
       text-align: center;
-      color: #6c757d;
       margin-top: 2rem;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+      color: #64748b;
     }
 
-    /* Collapsible */
-    .collapse-header {
-      cursor: pointer;
-      user-select: none;
+    .footer code {
+      background: var(--input-bg);
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.75rem;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border-radius: 6px;
+      font-size: 0.75rem;
       font-weight: 600;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      margin-top: 0.5rem;
     }
 
-    .collapse-header i {
-      transition: transform 0.2s;
-    }
+    @media (max-width: 640px) {
+      body {
+        padding: 1rem 0.75rem;
+      }
 
-    .collapse-header.collapsed i {
-      transform: rotate(-90deg);
-    }
+      .card-body {
+        padding: 1.5rem;
+      }
 
-    @media (max-width: 480px) {
-      .card { margin: 0.5rem; border-radius: 0.75rem; }
-      .card-body { padding: 1.25rem; }
-      .btn-lg { width: 100%; justify-content: center; }
+      .header h1 {
+        font-size: 1.5rem;
+      }
+
+      .header-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+      }
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div class="card-header d-flex align-items-center gap-2">
-      <i class="fas fa-credit-card"></i>
-      <span>Payment Callback Simulator</span>
+  <div class="container">
+    <div class="header">
+      <h1>
+        <div class="header-icon">
+          <i class="fas fa-webhook"></i>
+        </div>
+        Webhook Response Tester
+      </h1>
+      <p>Test and verify payment webhook responses in real-time</p>
     </div>
 
-    <div class="card-body">
-      <form method="post" class="needs-validation" novalidate>
-        {% csrf_token %}
-
-        <div class="mb-3">
-          <label class="form-label">tx_ref</label>
-          <input type="text" name="tx_ref" class="form-control" value="{{ tx_ref|default:'' }}"
-                 placeholder="e.g. destina_1763113655563k">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-title">
+          <i class="fas fa-sliders-h"></i>
+          Configuration
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">transaction_id <span class="text-danger">*</span></label>
-          <input type="text" name="transaction_id" class="form-control" value="{{ transaction_id|default:'' }}"
-                 placeholder="e.g. 191823" required>
-          <div class="invalid-feedback">Please enter a transaction ID.</div>
-        </div>
+        <form method="post" class="needs-validation" novalidate>
+          {% csrf_token %}
 
-        <div class="d-grid gap-2 d-md-flex">
-          <button type="submit" class="btn btn-success btn-lg">
-            <i class="fas fa-paper-plane"></i> Send Callback
+          <div class="form-group">
+            <label class="form-label">Transaction Reference</label>
+            <input 
+              type="text" 
+              name="tx_ref" 
+              class="form-control" 
+              value="{{ tx_ref|default:'' }}"
+              placeholder="e.g., destina_1763113655563k"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              Transaction ID<span class="required">*</span>
+            </label>
+            <input 
+              type="text" 
+              name="transaction_id" 
+              class="form-control" 
+              value="{{ transaction_id|default:'' }}"
+              placeholder="e.g., 191823"
+              required
+            >
+          </div>
+
+          <button type="submit" class="btn-primary">
+            <i class="fas fa-paper-plane"></i>
+            Generate Response
           </button>
-          <a href="?tx_ref=destina_1763113655563k&transaction_id=191823"
-             class="btn btn-outline-primary btn-lg d-flex align-items-center gap-1">
-            <i class="fas fa-flask"></i> Test Data
-          </a>
-        </div>
-      </form>
+        </form>
 
-      <!-- Response Section (Collapsible on Mobile) -->
-      {% if response %}
-      <div class="response-section mt-4">
-        <div class="collapse-header" data-bs-toggle="collapse" data-bs-target="#responseBody"
-             aria-expanded="true">
-          <span>Response</span>
-          <i class="fas fa-chevron-down"></i>
-        </div>
+        {% if response %}
+        <div class="response-card">
+          <div class="section-title">
+            <i class="fas fa-terminal"></i>
+            Response
+          </div>
 
-        <div class="collapse show" id="responseBody">
-          <div class="mt-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span></span>
-              <button class="btn btn-sm btn-outline-secondary btn-copy" onclick="copyJSON()">
-                <i class="fas fa-copy"></i> Copy
+          {% if response.status == "success" %}
+            <div class="alert alert-success">
+              <i class="fas fa-check-circle"></i>
+              <div>
+                <strong>Success!</strong> {{ response.message }}
+              </div>
+            </div>
+          {% elif response.status == "failed" %}
+            <div class="alert alert-danger">
+              <i class="fas fa-times-circle"></i>
+              <div>
+                <strong>Failed:</strong> {{ response.message }}
+              </div>
+            </div>
+          {% else %}
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-triangle"></i>
+              <div>{{ response.message|default:"Processing..." }}</div>
+            </div>
+          {% endif %}
+
+          <div class="json-container">
+            <div class="json-header">
+              <span class="json-label">JSON Response</span>
+              <button class="btn-copy" onclick="copyJSON()">
+                <i class="fas fa-copy"></i>
+                Copy
               </button>
             </div>
-
-            {% if response.status == "success" %}
-              <div class="alert alert-success d-flex align-items-center gap-2">
-                <i class="fas fa-check-circle"></i>
-                <div><strong>Success:</strong> {{ response.message }}</div>
-              </div>
-            {% elif response.status == "failed" %}
-              <div class="alert alert-danger d-flex align-items-center gap-2">
-                <i class="fas fa-times-circle"></i>
-                <div><strong>Failed:</strong> {{ response.message }}</div>
-              </div>
-            {% else %}
-              <div class="alert alert-warning d-flex align-items-center gap-2">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>{{ response.message|default:"Processing..." }}</div>
-              </div>
-            {% endif %}
-
             <pre class="json-output" id="json-output">{{ json_response }}</pre>
           </div>
         </div>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
 
     <div class="footer">
-      <code>POST /api/users/auth/payment-callback/</code><br>
-      Flutterwave Verified • No Auth
+      <code>POST /api/users/auth/payment-callback/</code>
+      <br>
+      <span class="badge">
+        <i class="fas fa-shield-alt"></i> Flutterwave Verified
+      </span>
     </div>
   </div>
 
-  <!-- Bootstrap JS (for collapse & validation) -->
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
@@ -250,23 +460,21 @@
       const text = document.getElementById('json-output').textContent;
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.querySelector('.btn-copy');
-        const original = btn.innerHTML;
+        const originalHTML = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        btn.classList.replace('btn-outline-secondary', 'btn-success');
+        btn.style.background = 'var(--success)';
+        btn.style.color = 'white';
+        btn.style.borderColor = 'var(--success)';
+        
         setTimeout(() => {
-          btn.innerHTML = original;
-          btn.classList.replace('btn-success', 'btn-outline-secondary');
+          btn.innerHTML = originalHTML;
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.borderColor = '';
         }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
       });
-    }
-
-    // Auto-collapse on small screens
-    if (window.innerWidth <= 480) {
-      const header = document.querySelector('.collapse-header');
-      const collapse = new bootstrap.Collapse('#responseBody', { toggle: false });
-      header.classList.add('collapsed');
-      header.setAttribute('aria-expanded', 'false');
-      document.getElementById('responseBody').classList.remove('show');
     }
   </script>
 </body>
