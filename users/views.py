@@ -708,8 +708,32 @@ class ReservationListCreateView(ListCreateAPIView):
             logger.info(f"Generated tx_ref: {tx_ref}")
         else:
             tx_ref = self.request.data['tx_ref']
-        reservation = serializer.save(user=self.request.user, tx_ref=tx_ref)
-        logger.info(f"Reservation created with ID: {reservation.id}, tx_ref: {tx_ref}, ride_type: {reservation.ride_type}")
+
+        # Calculate amount based on seats and base fare
+        reservation_seats = self.request.data.get('reservation_seats', '')
+        seats_count = len([s.strip() for s in reservation_seats.split(',') if s.strip()]) if reservation_seats else 1  # Default to 1 if no seats specified
+        logger.info(f"Seats selected: {reservation_seats}, Count: {seats_count}")
+
+        ride_type = self.request.data.get('ride_type')
+        base_fare = 200  # Default fare for bus or fallback
+        if ride_type == 'vehicle':
+            route_id = self.request.data.get('route_id')
+            if route_id:
+                try:
+                    route = Route.objects.get(id=route_id)
+                    if route.fare:
+                        base_fare = float(route.fare)
+                        logger.info(f"Using route fare: {base_fare}")
+                except Route.DoesNotExist:
+                    logger.warning(f"Route ID {route_id} not found, using default fare")
+            else:
+                logger.info("No route_id for vehicle, using default fare")
+
+        calculated_amount = seats_count * base_fare
+        logger.info(f"Calculated amount: {calculated_amount} (seats: {seats_count} * fare: {base_fare})")
+
+        reservation = serializer.save(user=self.request.user, tx_ref=tx_ref, amount=calculated_amount)
+        logger.info(f"Reservation created with ID: {reservation.id}, tx_ref: {tx_ref}, ride_type: {reservation.ride_type}, amount: {calculated_amount}")
         status = self.request.data.get('status', 'pending')
         reservation.status = status
         logger.info(f"Setting status to: {status}")
