@@ -1167,7 +1167,8 @@ class ProcessWithdrawalRequestView(APIView):
 
     def post(self, request, withdrawal_id):
         user = request.user
-        
+        if user.role != 'admin':
+            return Response({"error": "Only admins can process withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
 
         try:
             withdrawal = WithdrawalRequest.objects.get(id=withdrawal_id)
@@ -1179,15 +1180,16 @@ class ProcessWithdrawalRequestView(APIView):
             return Response({"error": "Invalid action. Must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
+            driver_user = withdrawal.driver_profile.user
+            # Check if driver has sufficient earnings
+            if driver_user.todays_earnings < withdrawal.amount:
+                return Response({"error": "Insufficient earnings balance"}, status=status.HTTP_400_BAD_REQUEST)
+
             # Check if subaccount exists
             try:
                 subaccount = FlutterwaveSubaccount.objects.get(driver_profile=withdrawal.driver_profile)
             except FlutterwaveSubaccount.DoesNotExist:
                 return Response({"error": "Driver subaccount not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            # Check if driver has sufficient balance
-            if withdrawal.driver_profile.wallet < withdrawal.amount:
-                return Response({"error": "Insufficient wallet balance"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Process transfer via Flutterwave
             transfer_data = {
@@ -1215,18 +1217,18 @@ class ProcessWithdrawalRequestView(APIView):
                 response_data = response.json()
 
                 if response.status_code == 200 and response_data.get('status') == 'success':
-                    # Deduct from wallet
-                    withdrawal.driver_profile.wallet -= withdrawal.amount
-                    withdrawal.driver_profile.save()
+                    # Deduct from todays_earnings
+                    driver_user.todays_earnings -= withdrawal.amount
+                    driver_user.save()
 
                     # Update withdrawal status
-                    withdrawal.status = 'processed'
+                    withdrawal.status = 'approved'
                     withdrawal.processed_at = timezone.now()
                     withdrawal.notes = request.data.get('notes', '')
                     withdrawal.save()
 
                     return Response({
-                        "message": "Withdrawal processed successfully",
+                        "message": "Withdrawal approved and processed successfully",
                         "transfer_id": response_data['data']['id']
                     }, status=status.HTTP_200_OK)
                 else:
