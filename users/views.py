@@ -387,14 +387,6 @@ class UpdateVehicleView(APIView):
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
-class AllReservationsView(ListCreateAPIView):
-    serializer_class = ReservationSerializer
-    permission_classes = [AllowAny]
-
-    def get_queryset(self):
-        return Reservation.objects.all().order_by('-created_at')
-
         serializer = VehicleUpdateSerializer(data=request.data)
         if serializer.is_valid():
             vehicle, created = Vehicle.objects.get_or_create(driver_profile=profile)
@@ -403,6 +395,14 @@ class AllReservationsView(ListCreateAPIView):
             vehicle.save()
             return Response({"message": "Vehicle updated"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AllReservationsView(ListCreateAPIView):
+    serializer_class = ReservationSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Reservation.objects.all().order_by('-created_at')
 
 class UpdateUserProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1100,12 +1100,12 @@ class RequestWithdrawalView(APIView):
             logger.info(f"Withdrawal amount: ₦{amount}")
             logger.info(f"Driver wallet balance: ₦{profile.wallet}")
 
-            # Check if driver has sufficient balance
-            if profile.wallet < amount:
-                logger.warning(f"Insufficient balance. Wallet: ₦{profile.wallet}, Requested: ₦{amount}")
+            # Check if driver has sufficient earnings
+            if user.todays_earnings < amount:
+                logger.warning(f"Insufficient earnings. Earnings: ₦{user.todays_earnings}, Requested: ₦{amount}")
                 return Response({
-                    "error": "Insufficient wallet balance",
-                    "wallet_balance": float(profile.wallet),
+                    "error": "Insufficient earnings balance",
+                    "earnings_balance": float(user.todays_earnings),
                     "requested_amount": float(amount)
                 }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1178,64 +1178,30 @@ class ProcessWithdrawalRequestView(APIView):
             return Response({"error": "Invalid action. Must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
-            driver_user = withdrawal.driver_profile.user
+            driver_profile = withdrawal.driver_profile
+            driver_user = driver_profile.user
+
+            # Check if driver has a subaccount
+            if not FlutterwaveSubaccount.objects.filter(driver_profile=driver_profile).exists():
+                return Response({"error": "Driver does not have a Flutterwave subaccount. Please create one before approving withdrawal."}, status=status.HTTP_400_BAD_REQUEST)
+
             # Check if driver has sufficient earnings
             if driver_user.todays_earnings < withdrawal.amount:
                 return Response({"error": "Insufficient earnings balance"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if subaccount exists
-            try:
-                subaccount = FlutterwaveSubaccount.objects.get(driver_profile=withdrawal.driver_profile)
-            except FlutterwaveSubaccount.DoesNotExist:
-                return Response({"error": "Driver subaccount not found"}, status=status.HTTP_404_NOT_FOUND)
+            # Deduct from todays_earnings
+            driver_user.todays_earnings -= withdrawal.amount
+            driver_user.save()
 
-            # Process transfer via Flutterwave
-            transfer_data = {
-                "account_bank": subaccount.bank_code,
-                "account_number": subaccount.account_number,
-                "amount": float(withdrawal.amount),
-                "narration": f"Withdrawal for {withdrawal.driver_profile.user.email}",
-                "currency": "NGN",
-                "reference": f"withdrawal_{withdrawal.id}_{timezone.now().strftime('%Y%m%d%H%M%S')}",
-                "callback_url": f"{settings.BASE_URL}/api/withdrawal-callback/",
-                "debit_currency": "NGN"
-            }
+            # Update withdrawal status
+            withdrawal.status = 'approved'
+            withdrawal.processed_at = timezone.now()
+            withdrawal.notes = request.data.get('notes', '')
+            withdrawal.save()
 
-            headers = {
-                "Authorization": f"Bearer {settings.FLUTTERWAVE_SECRET_KEY}",
-                "Content-Type": "application/json"
-            }
-
-            try:
-                response = requests.post(
-                    "https://api.flutterwave.com/v3/transfers",
-                    json=transfer_data,
-                    headers=headers
-                )
-                response_data = response.json()
-
-                if response.status_code == 200 and response_data.get('status') == 'success':
-                    # Deduct from todays_earnings
-                    driver_user.todays_earnings -= withdrawal.amount
-                    driver_user.save()
-
-                    # Update withdrawal status
-                    withdrawal.status = 'approved'
-                    withdrawal.processed_at = timezone.now()
-                    withdrawal.notes = request.data.get('notes', '')
-                    withdrawal.save()
-
-                    return Response({
-                        "message": "Withdrawal approved and processed successfully",
-                        "transfer_id": response_data['data']['id']
-                    }, status=status.HTTP_200_OK)
-                else:
-                    return Response({
-                        "error": "Failed to process transfer with Flutterwave",
-                        "details": response_data
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            except requests.RequestException as e:
-                return Response({"error": "Network error while processing transfer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({
+                "message": "Withdrawal approved and amount deducted from earnings successfully"
+            }, status=status.HTTP_200_OK)
 
         elif action == 'reject':
             withdrawal.status = 'rejected'
