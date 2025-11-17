@@ -1167,9 +1167,7 @@ class ProcessWithdrawalRequestView(APIView):
 
     def post(self, request, withdrawal_id):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can process withdrawal requests"}, status=status.HTTP_403_FORBIDDEN)
-
+        
         try:
             withdrawal = WithdrawalRequest.objects.get(id=withdrawal_id)
         except WithdrawalRequest.DoesNotExist:
