@@ -33,6 +33,8 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['destina-backend.onrender.com', 'destina-admin-web-backend.onrender.com']
 
+BASE_URL = config('BASE_URL', default='https://destina-backend.onrender.com')
+
 
 # Application definition
 
