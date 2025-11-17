@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification
+from .models import User, DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification, UserNotification
 from datetime import timedelta
 
 class UserSerializer(serializers.ModelSerializer):
@@ -317,3 +317,10 @@ class DriverEarningsSerializer(serializers.ModelSerializer):
 
 class TotalEarningsSerializer(serializers.Serializer):
     total_earnings = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserNotification
+        fields = ['id', 'user', 'message', 'type', 'is_read', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']

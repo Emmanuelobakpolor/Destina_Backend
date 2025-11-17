@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GetMyDriverProfileView, InitiateSignupView, TotalPaidReservationsView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView, AllReservationsView
+from .views import GetMyDriverProfileView, InitiateSignupView, TotalPaidReservationsView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView, AllReservationsView, ListUserNotificationsView, MarkUserNotificationReadView
 
 
 urlpatterns = [
@@ -43,5 +43,7 @@ urlpatterns = [
     path('flutterwave-webhook/', FlutterwaveWebhookView.as_view(), name='flutterwave-webhook'),
     path('payment-callback/', PaymentCallbackView.as_view(), name='payment-callback'),
     path('all-reservations/', AllReservationsView.as_view(), name='all-reservations'),
+    path('list-user-notifications/', ListUserNotificationsView.as_view(), name='list-user-notifications'),
+    path('mark-user-notification-read/<int:notification_id>/', MarkUserNotificationReadView.as_view(), name='mark-user-notification-read'),
 
 ]

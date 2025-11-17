@@ -2,12 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer, NotificationSerializer, DriverEarningsSerializer, TotalEarningsSerializer
+from .serializers import DriverDocumentSerializer, SignupSerializer, VerifyDriverSignupWithFilesSerializer, VerifySignupSerializer, LoginSerializer, VerifyLoginSerializer, DriverProfileUpdateSerializer, VehicleUpdateSerializer, UserProfileUpdateSerializer, UserSerializer, RouteSerializer, ReservationSerializer, SearchRouteSerializer, FlutterwaveSubaccountSerializer, WithdrawalRequestSerializer, NotificationSerializer, DriverEarningsSerializer, TotalEarningsSerializer, UserNotificationSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Sum
 import random
-from .models import DriverProfile, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification
+from .models import DriverProfile, UserNotification, Vehicle, VerificationCode, DriverDocument, Route, Reservation, FlutterwaveSubaccount, WithdrawalRequest, Notification
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 import requests
 from django.conf import settings
@@ -826,6 +826,19 @@ class ReservationListCreateView(ListCreateAPIView):
                     type='reservation'
                 )
                 logger.info(f"Notification created for driver {driver.user.email}")
+
+            # Create notification for the user
+            user_message = f"Reservation created: Your booking from {reservation.pickup_location} to {reservation.destination} on {reservation.date}"
+            if reservation.ride_type == 'vehicle' and driver:
+                user_message += f" with driver {driver.first_name} {driver.last_name} ({driver.user.phone_number})"
+            elif reservation.ride_type == 'bus':
+                user_message += " via bus service"
+            UserNotification.objects.create(
+                user=reservation.user,
+                message=user_message,
+                type='reservation'
+            )
+            logger.info(f"User notification created for {reservation.user.email}")
         else:
             logger.info("Not a vehicle reservation, keeping status as is")
             reservation.save()
@@ -1347,6 +1360,18 @@ class FlutterwaveWebhookView(APIView):
                         type='payment'
                     )
 
+                    # Create notification for user
+                    user_message = f"Payment successful: Your booking from {reservation.pickup_location} to {reservation.destination} on {reservation.date} has been confirmed"
+                    if reservation.ride_type == 'vehicle' and driver_profile:
+                        user_message += f" with driver {driver_profile.first_name} {driver_profile.last_name} ({driver_profile.user.phone_number})"
+                    elif reservation.ride_type == 'bus':
+                        user_message += " via bus service"
+                    UserNotification.objects.create(
+                        user=reservation.user,
+                        message=user_message,
+                        type='payment'
+                    )
+
                     logger.info(f"Added ₦{reservation.amount} to driver {driver_profile.user.email}'s earnings")
 
                 elif reservation.ride_type == 'bus':
@@ -1480,6 +1505,45 @@ class RefreshDriverEarningsView(APIView):
             }, status=status.HTTP_200_OK)
         except DriverProfile.DoesNotExist:
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ListUserNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        notifications = UserNotification.objects.filter(user=user).order_by('-created_at')
+        serializer = UserNotificationSerializer(notifications, many=True, context={'request': request})
+        unread_count = notifications.filter(is_read=False).count()
+        return Response({
+            "notifications": serializer.data,
+            "unread_count": unread_count
+        }, status=status.HTTP_200_OK)
+
+
+class MarkUserNotificationReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, notification_id):
+        user = request.user
+        try:
+            notification = UserNotification.objects.get(id=notification_id, user=user)
+            notification.is_read = True
+            notification.save()
+            return Response({"message": "Notification marked as read"}, status=status.HTTP_200_OK)
+        except UserNotification.DoesNotExist:
+            return Response({"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class CreateUserNotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = UserNotificationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
