@@ -156,7 +156,7 @@ class DriverDocumentSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
-        fields = ['id', 'origin', 'destination', 'fare', 'created_at', 'updated_at']
+        fields = ['id', 'origin', 'destination', 'fare', 'date', 'time', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def create(self, validated_data):
@@ -170,6 +170,7 @@ class SearchRouteSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    departureDate = serializers.DateField(source='date')
     departureTime = serializers.SerializerMethodField()
     departureLocation = serializers.SerializerMethodField()
     arrivalTime = serializers.SerializerMethodField()
@@ -187,7 +188,7 @@ class SearchRouteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Route
-        fields = ['name', 'type', 'price', 'departureTime', 'departureLocation', 'arrivalTime', 'arrivalLocation', 'duration', 'capacity', 'brand', 'plate_number', 'front_image_url', 'phone_number', 'selfie_url', 'first_name', 'last_name', 'route_id']
+        fields = ['name', 'type', 'price', 'departureDate', 'departureTime', 'departureLocation', 'arrivalTime', 'arrivalLocation', 'duration', 'capacity', 'brand', 'plate_number', 'front_image_url', 'phone_number', 'selfie_url', 'first_name', 'last_name', 'route_id']
 
     def get_name(self, obj):
         profile = obj.driver_profile
@@ -202,7 +203,7 @@ class SearchRouteSerializer(serializers.ModelSerializer):
         return float(obj.fare) if obj.fare else 0
 
     def get_departureTime(self, obj):
-        return None # Or a calculated time if available
+        return obj.time.strftime('%H:%M') if obj.time else None
 
     def get_departureLocation(self, obj):
         return obj.origin
