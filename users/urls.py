@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import DeleteUserView, DisableUserView, GetMyDriverProfileView, InitiateSignupView, TotalPaidReservationsView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView, AllReservationsView, ListUserNotificationsView, MarkUserNotificationReadView
+from .views import DeleteUserView, DisableUserView, EnableUserView, GetMyDriverProfileView, InitiateSignupView, TotalPaidReservationsView, VerifySignupView, LoginView, VerifyLoginView, VerifyDriverSignupWithFilesView, ResendOTPView, UpdateDriverProfileView, UpdateVehicleView, UpdateUserProfileView, UploadUserProfilePictureView, DriverVerificationStatusView, GetDriverVerificationStatusByIdView, GetAdminDriverDocumentsView, GetMyDriverDocumentsView, UserStatsView, ListUsersView, ListDriversView, GetDriverProfileView, RouteListCreateView, RouteDetailView, ReservationListCreateView, ReservationDetailView, SearchRoutesView, CreateFlutterwaveSubaccountView, GetMyFlutterwaveSubaccountView, RequestWithdrawalView, ListMyWithdrawalRequestsView, ListAllWithdrawalRequestsView, ProcessWithdrawalRequestView, DriverReservationsView, CompletedReservationsView, ListNotificationsView, MarkNotificationReadView, FlutterwaveWebhookView, PaymentCallbackView, TotalDriversTodaysEarningsView, DriversTodaysEarningsView, AllReservationsView, ListUserNotificationsView, MarkUserNotificationReadView
 
 
 urlpatterns = [
@@ -46,6 +46,7 @@ urlpatterns = [
     path('list-user-notifications/', ListUserNotificationsView.as_view(), name='list-user-notifications'),
     path('mark-user-notification-read/<int:notification_id>/', MarkUserNotificationReadView.as_view(), name='mark-user-notification-read'),
     path('disable-user/', DisableUserView.as_view(), name='disable-user'),
+    path('enable-user/', EnableUserView.as_view(), name='enable-user'),
     path('delete-user/', DeleteUserView.as_view(), name='delete-user'),
 
 ]
