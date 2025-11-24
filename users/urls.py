@@ -48,5 +48,4 @@ urlpatterns = [
     path('disable-user/', DisableUserView.as_view(), name='disable-user'),
     path('enable-user/', EnableUserView.as_view(), name='enable-user'),
     path('delete-user/', DeleteUserView.as_view(), name='delete-user'),
-
 ]
