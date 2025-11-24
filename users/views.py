@@ -1219,8 +1219,10 @@ class ProcessWithdrawalRequestView(APIView):
                 return Response({"error": "Insufficient earnings balance"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Deduct from todays_earnings
+            logger.info(f"Before deduction: Driver {driver_user.email}, todays_earnings: {driver_user.todays_earnings}, deducting: {withdrawal.amount}")
             driver_user.todays_earnings -= withdrawal.amount
             driver_user.save()
+            logger.info(f"After deduction: Driver {driver_user.email}, todays_earnings: {driver_user.todays_earnings}")
 
             # Update withdrawal status
             withdrawal.status = 'approved'
