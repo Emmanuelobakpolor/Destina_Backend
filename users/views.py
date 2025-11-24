@@ -1100,7 +1100,10 @@ class RequestWithdrawalView(APIView):
             logger.error(f"User is not authenticated")
             return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
         
-
+        # Check role
+        if user.role != 'driver':
+            logger.error(f"User role is '{user.role}', not 'driver'. Only drivers can request withdrawals")
+            return Response({"error": "Only drivers can request withdrawals"}, status=status.HTTP_403_FORBIDDEN)
 
         # Check driver profile
         try:
