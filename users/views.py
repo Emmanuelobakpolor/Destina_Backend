@@ -1091,8 +1091,15 @@ class RequestWithdrawalView(APIView):
         logger.info(f"Is authenticated: {request.user.is_authenticated}")
         logger.info(f"Authorization header present: {'Authorization' in request.headers}")
         if 'Authorization' in request.headers:
-            logger.info(f"Authorization header format: {request.headers['Authorization'][:20]}...")
-        
+            auth_header = request.headers['Authorization']
+            logger.info(f"Authorization header: {auth_header}")
+            if auth_header.startswith('Bearer '):
+                token = auth_header[7:]
+                logger.info(f"Token length: {len(token)}")
+                logger.info(f"Token starts with: {token[:10] if len(token) > 10 else token}...")
+            else:
+                logger.warning(f"Authorization header does not start with 'Bearer ': {auth_header[:20]}...")
+
         user = request.user
         
         # Check if user is authenticated
