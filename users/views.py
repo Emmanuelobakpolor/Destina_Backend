@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -932,7 +933,7 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
 
                 # Credit earnings if reservation is already paid
                 if reservation.status in ['pending', 'paid']:
-                    driver_user.todays_earnings += reservation.amount
+                    driver_user.todays_earnings += Decimal(str(reservation.amount))
                     driver_user.save()
                     Notification.objects.create(
                         driver_profile=driver,
@@ -1405,7 +1406,7 @@ class FlutterwaveWebhookView(APIView):
 
                     # Update todays_earnings for the driver
                     driver_user = driver_profile.user
-                    driver_user.todays_earnings += reservation.amount
+                    driver_user.todays_earnings += Decimal(str(reservation.amount))
                     driver_user.save()
                     logger.info(f"Updated todays_earnings for driver {driver_user.email} by ₦{reservation.amount} to {driver_user.todays_earnings}")
 
