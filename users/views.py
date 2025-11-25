@@ -1156,13 +1156,21 @@ class RequestWithdrawalView(APIView):
                 logger.error(f"No Flutterwave subaccount for driver {user.email}")
                 return Response({"error": "Please create a Flutterwave subaccount first"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create withdrawal request
-            withdrawal = WithdrawalRequest.objects.create(
-                driver_profile=profile,
-                amount=amount,
-                reason=serializer.validated_data.get('reason')
-            )
-            logger.info(f"Withdrawal request created. ID: {withdrawal.id}, Status: {withdrawal.status}")
+            # Use a transaction to ensure deduction and request creation are atomic
+            with transaction.atomic():
+                # 1. Deduct amount from driver's earnings immediately
+                logger.info(f"Before deduction: Driver {user.email}, todays_earnings: {user.todays_earnings}, deducting: {amount}")
+                user.todays_earnings -= amount
+                user.save()
+                logger.info(f"After deduction: Driver {user.email}, new todays_earnings: {user.todays_earnings}")
+
+                # 2. Create the withdrawal request for admin approval
+                withdrawal = WithdrawalRequest.objects.create(
+                    driver_profile=profile,
+                    amount=amount,
+                    reason=serializer.validated_data.get('reason')
+                )
+                logger.info(f"Withdrawal request created. ID: {withdrawal.id}, Status: {withdrawal.status}")
 
             return Response({
                 "message": "Withdrawal request submitted successfully",
