@@ -804,25 +804,35 @@ class ReservationListCreateView(ListCreateAPIView):
                 reservation.driver_trips = 120
                 logger.info("Driver fields populated")
             else:
-                # Fallback for no driver assigned yet
-                reservation.driver_name = 'N/A (Pending Assignment)'
-                reservation.driver_phone = 'N/A'
-                reservation.driver_profile_image_url = ''
-                reservation.driver_company = 'N/A'
-                reservation.vehicle_brand = 'N/A'
-                reservation.vehicle_plate = 'N/A'
-                reservation.driver_rating = 0.0
-                reservation.driver_trips = 0
-                logger.info("Fallback driver fields set")
+                # If no driver is found, we should not proceed with crediting earnings.
+                # The reservation is created but remains unassigned.
+                # The logic to credit earnings will not be triggered.
+                logger.warning(f"No driver assigned for reservation from {reservation.pickup_location} to {reservation.destination}. Earnings not credited.")
 
             reservation.save()
             logger.info(f"Reservation saved with driver: {reservation.driver.id if reservation.driver else None}")
+            # Fallback for no driver assigned yet
+            reservation.driver_name = 'N/A (Pending Assignment)'
+            reservation.driver_phone = 'N/A'
+            reservation.driver_profile_image_url = ''
+            reservation.driver_company = 'N/A'
+            reservation.vehicle_brand = 'N/A'
+            reservation.vehicle_plate = 'N/A'
+            reservation.driver_rating = 0.0
+            reservation.driver_trips = 0
+            logger.info("Fallback driver fields set")
 
             # Create notification for the driver if assigned
             if driver:
+                # Credit driver's earnings immediately upon reservation creation
+                driver_user = driver.user
+                driver_user.todays_earnings += reservation.amount
+                driver_user.save()
+                logger.info(f"Credited ₦{reservation.amount} to driver {driver_user.email}. New todays_earnings: ₦{driver_user.todays_earnings}")
+
                 Notification.objects.create(
                     driver_profile=driver,
-                    message=f"New reservation: {reservation.user.full_name} booked a ride from {reservation.pickup_location} to {reservation.destination}",
+                    message=f"New ride worth ₦{reservation.amount}: {reservation.user.full_name} from {reservation.pickup_location} to {reservation.destination}",
                     type='reservation'
                 )
                 logger.info(f"Notification created for driver {driver.user.email}")
@@ -921,7 +931,7 @@ class ReservationDetailView(RetrieveUpdateDestroyAPIView):
                 reservation.driver_trips = 120
 
                 # Credit earnings if reservation is already paid
-                if reservation.status == 'pending':
+                if reservation.status in ['pending', 'paid']:
                     driver_user.todays_earnings += reservation.amount
                     driver_user.save()
                     Notification.objects.create(
@@ -1632,6 +1642,3 @@ class EnableUserView(APIView):
             return Response({"message": f"User {user.email} enabled successfully"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-
-
