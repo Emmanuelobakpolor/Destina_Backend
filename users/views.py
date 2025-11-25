@@ -1122,12 +1122,12 @@ class RequestWithdrawalView(APIView):
 
         # Log request data
         logger.info(f"Request data: {request.data}")
-        
+
         serializer = WithdrawalRequestSerializer(data=request.data)
         if serializer.is_valid():
             amount = serializer.validated_data['amount']
             logger.info(f"Withdrawal amount: ₦{amount}")
-            logger.info(f"Driver wallet balance: ₦{profile.wallet}")
+            logger.info(f"Driver todays earnings: ₦{user.todays_earnings}")
 
             # Check if driver has sufficient earnings
             if user.todays_earnings < amount:
@@ -1195,27 +1195,44 @@ class ProcessWithdrawalRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, withdrawal_id):
+        # Comprehensive logging for withdrawal processing
+        logger.info(f"=== Withdrawal Processing Started ===")
+        logger.info(f"User ID: {request.user.id}")
+        logger.info(f"User email: {request.user.email}")
+        logger.info(f"User role: {request.user.role}")
+        logger.info(f"Is authenticated: {request.user.is_authenticated}")
+        logger.info(f"Withdrawal ID: {withdrawal_id}")
+        logger.info(f"Request data: {request.data}")
+
         user = request.user
-        
+
         try:
             withdrawal = WithdrawalRequest.objects.get(id=withdrawal_id)
+            logger.info(f"Withdrawal found. ID: {withdrawal.id}, Amount: ₦{withdrawal.amount}, Status: {withdrawal.status}, Driver: {withdrawal.driver_profile.user.email}")
         except WithdrawalRequest.DoesNotExist:
+            logger.error(f"Withdrawal request not found: {withdrawal_id}")
             return Response({"error": "Withdrawal request not found"}, status=status.HTTP_404_NOT_FOUND)
 
         action = request.data.get('action')
         if action not in ['approve', 'reject']:
+            logger.error(f"Invalid action: {action}")
             return Response({"error": "Invalid action. Must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
             driver_profile = withdrawal.driver_profile
             driver_user = driver_profile.user
+            logger.info(f"Processing approval for driver: {driver_user.email}, todays_earnings: ₦{driver_user.todays_earnings}")
 
             # Check if driver has a subaccount
-            if not FlutterwaveSubaccount.objects.filter(driver_profile=driver_profile).exists():
+            subaccount_exists = FlutterwaveSubaccount.objects.filter(driver_profile=driver_profile).exists()
+            logger.info(f"Flutterwave subaccount exists: {subaccount_exists}")
+            if not subaccount_exists:
+                logger.error(f"No Flutterwave subaccount for driver {driver_user.email}")
                 return Response({"error": "Driver does not have a Flutterwave subaccount. Please create one before approving withdrawal."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Check if driver has sufficient earnings
             if driver_user.todays_earnings < withdrawal.amount:
+                logger.warning(f"Insufficient earnings. Earnings: ₦{driver_user.todays_earnings}, Requested: ₦{withdrawal.amount}")
                 return Response({"error": "Insufficient earnings balance"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Deduct from todays_earnings
@@ -1229,16 +1246,19 @@ class ProcessWithdrawalRequestView(APIView):
             withdrawal.processed_at = timezone.now()
             withdrawal.notes = request.data.get('notes', '')
             withdrawal.save()
+            logger.info(f"Withdrawal approved. ID: {withdrawal.id}, Processed at: {withdrawal.processed_at}")
 
             return Response({
                 "message": "Withdrawal approved and amount deducted from earnings successfully"
             }, status=status.HTTP_200_OK)
 
         elif action == 'reject':
+            logger.info(f"Rejecting withdrawal ID: {withdrawal.id}")
             withdrawal.status = 'rejected'
             withdrawal.processed_at = timezone.now()
             withdrawal.notes = request.data.get('notes', '')
             withdrawal.save()
+            logger.info(f"Withdrawal rejected. ID: {withdrawal.id}, Processed at: {withdrawal.processed_at}")
             return Response({"message": "Withdrawal request rejected"}, status=status.HTTP_200_OK)
 
 
