@@ -1157,21 +1157,13 @@ class RequestWithdrawalView(APIView):
                 logger.error(f"No Flutterwave subaccount for driver {user.email}")
                 return Response({"error": "Please create a Flutterwave subaccount first"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Use a transaction to ensure deduction and request creation are atomic
-            with transaction.atomic():
-                # 1. Deduct amount from driver's earnings immediately
-                logger.info(f"Before deduction: Driver {user.email}, todays_earnings: {user.todays_earnings}, deducting: {amount}")
-                user.todays_earnings -= amount
-                user.save()
-                logger.info(f"After deduction: Driver {user.email}, new todays_earnings: {user.todays_earnings}")
-
-                # 2. Create the withdrawal request for admin approval
-                withdrawal = WithdrawalRequest.objects.create(
-                    driver_profile=profile,
-                    amount=amount,
-                    reason=serializer.validated_data.get('reason')
-                )
-                logger.info(f"Withdrawal request created. ID: {withdrawal.id}, Status: {withdrawal.status}")
+            # Create the withdrawal request with status 'pending' without deducting earnings
+            withdrawal = WithdrawalRequest.objects.create(
+                driver_profile=profile,
+                amount=amount,
+                reason=serializer.validated_data.get('reason')
+            )
+            logger.info(f"Withdrawal request created. ID: {withdrawal.id}, Status: {withdrawal.status}")
 
             return Response({
                 "message": "Withdrawal request submitted successfully",
@@ -1238,6 +1230,11 @@ class ProcessWithdrawalRequestView(APIView):
             return Response({"error": "Invalid action. Must be 'approve' or 'reject'"}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == 'approve':
+            # Only deduct if status is changing from pending to approved
+            if withdrawal.status != 'pending':
+                logger.error(f"Cannot approve withdrawal {withdrawal.id} with status '{withdrawal.status}'. Only pending withdrawals can be approved.")
+                return Response({"error": "Only pending withdrawals can be approved"}, status=status.HTTP_400_BAD_REQUEST)
+
             driver_profile = withdrawal.driver_profile
             driver_user = driver_profile.user
             logger.info(f"Processing approval for driver: {driver_user.email}, todays_earnings: ₦{driver_user.todays_earnings}")
@@ -1254,21 +1251,24 @@ class ProcessWithdrawalRequestView(APIView):
                 logger.warning(f"Insufficient earnings. Earnings: ₦{driver_user.todays_earnings}, Requested: ₦{withdrawal.amount}")
                 return Response({"error": "Insufficient earnings balance"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Deduct from todays_earnings
-            logger.info(f"Before deduction: Driver {driver_user.email}, todays_earnings: {driver_user.todays_earnings}, deducting: {withdrawal.amount}")
-            driver_user.todays_earnings -= withdrawal.amount
-            driver_user.save()
-            logger.info(f"After deduction: Driver {driver_user.email}, todays_earnings: {driver_user.todays_earnings}")
+            # Use transaction for atomicity
+            with transaction.atomic():
+                # Deduct from todays_earnings
+                logger.info(f"Before deduction: Driver {driver_user.email}, todays_earnings: {driver_user.todays_earnings}, deducting: {withdrawal.amount}")
+                driver_user.todays_earnings -= withdrawal.amount
+                driver_user.save()
+                logger.info(f"After deduction: Driver {driver_user.email}, todays_earnings: {driver_user.todays_earnings}")
 
-            # Update withdrawal status
-            withdrawal.status = 'approved'
-            withdrawal.processed_at = timezone.now()
-            withdrawal.notes = request.data.get('notes', '')
-            withdrawal.save()
-            logger.info(f"Withdrawal approved. ID: {withdrawal.id}, Processed at: {withdrawal.processed_at}")
+                # Update withdrawal status
+                withdrawal.status = 'approved'
+                withdrawal.processed_at = timezone.now()
+                withdrawal.notes = request.data.get('notes', '')
+                withdrawal.save()
+                logger.info(f"Withdrawal approved. ID: {withdrawal.id}, Processed at: {withdrawal.processed_at}")
 
             return Response({
-                "message": "Withdrawal approved and amount deducted from earnings successfully"
+                "message": "Withdrawal approved and amount deducted from earnings successfully",
+                "updated_earnings": float(driver_user.todays_earnings)
             }, status=status.HTTP_200_OK)
 
         elif action == 'reject':
