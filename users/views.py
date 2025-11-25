@@ -716,14 +716,14 @@ class ReservationListCreateView(ListCreateAPIView):
         logger.info(f"Seats selected: {reservation_seats}, Count: {seats_count}")
 
         ride_type = self.request.data.get('ride_type')
-        base_fare = 200  # Default fare for bus or fallback
+        base_fare = Decimal('200')  # Default fare for bus or fallback
         if ride_type == 'vehicle':
             route_id = self.request.data.get('route_id')
             if route_id:
                 try:
                     route = Route.objects.get(id=route_id)
                     if route.fare:
-                        base_fare = float(route.fare)
+                        base_fare = route.fare
                         logger.info(f"Using route fare: {base_fare}")
                 except Route.DoesNotExist:
                     logger.warning(f"Route ID {route_id} not found, using default fare")
