@@ -323,7 +323,9 @@ class TotalEarningsSerializer(serializers.Serializer):
 
 
 class UserNotificationSerializer(serializers.ModelSerializer):
+    reservation = ReservationSerializer(read_only=True)
+
     class Meta:
         model = UserNotification
-        fields = ['id', 'user', 'message', 'type', 'is_read', 'created_at']
+        fields = ['id', 'user', 'message', 'type', 'is_read', 'created_at', 'reservation']
         read_only_fields = ['id', 'user', 'created_at']
