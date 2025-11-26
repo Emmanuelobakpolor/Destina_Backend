@@ -833,7 +833,7 @@ class ReservationListCreateView(ListCreateAPIView):
 
                 Notification.objects.create(
                     driver_profile=driver,
-                    message=f"New ride worth ₦{reservation.amount}: {reservation.user.full_name} from {reservation.pickup_location} to {reservation.destination}",
+                    message=f"New ride worth ₦{reservation.amount}: {reservation.user.full_name} ({reservation.user.phone_number}) from {reservation.pickup_location} to {reservation.destination}",
                     type='reservation',
                     reservation=reservation
                 )
