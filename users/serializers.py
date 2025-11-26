@@ -271,9 +271,11 @@ class FlutterwaveSubaccountSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
+    reservation = ReservationSerializer(read_only=True)
+
     class Meta:
         model = Notification
-        fields = ['id', 'driver_profile', 'message', 'type', 'is_read', 'created_at']
+        fields = ['id', 'driver_profile', 'message', 'type', 'is_read', 'created_at', 'reservation']
         read_only_fields = ['id', 'driver_profile', 'created_at']
 
 

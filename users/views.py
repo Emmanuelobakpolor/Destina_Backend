@@ -834,7 +834,8 @@ class ReservationListCreateView(ListCreateAPIView):
                 Notification.objects.create(
                     driver_profile=driver,
                     message=f"New ride worth ₦{reservation.amount}: {reservation.user.full_name} from {reservation.pickup_location} to {reservation.destination}",
-                    type='reservation'
+                    type='reservation',
+                    reservation=reservation
                 )
                 logger.info(f"Notification created for driver {driver.user.email}")
 

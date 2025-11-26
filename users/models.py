@@ -195,6 +195,7 @@ class Notification(models.Model):
     type = models.CharField(max_length=20, choices=[('reservation', 'Reservation'), ('system', 'System')], default='reservation')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    reservation = models.ForeignKey(Reservation, on_delete=models.SET_NULL, null=True, blank=True, related_name='driver_notifications')
 
     def __str__(self):
         return f"Notification for {self.driver_profile.user.email}: {self.message[:50]}"
@@ -206,6 +207,7 @@ class UserNotification(models.Model):
     type = models.CharField(max_length=20, choices=[('reservation', 'Reservation'), ('payment', 'Payment'), ('system', 'System')], default='reservation')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    reservation = models.ForeignKey(Reservation, on_delete=models.SET_NULL, null=True, blank=True, related_name='user_notifications')
 
     def __str__(self):
         return f"Notification for {self.user.email}: {self.message[:50]}"
