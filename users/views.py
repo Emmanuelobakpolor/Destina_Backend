@@ -960,8 +960,8 @@ class SearchRoutesView(APIView):
         destination = request.query_params.get('destination')
         date_str = request.query_params.get('date')
 
-        if not origin or not destination:
-            return Response({"error": "Origin and destination are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not origin or not destination or not date_str:
+            return Response({"error": "Origin, destination, and date are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         routes = Route.objects.filter(
             origin__iexact=origin,
@@ -969,13 +969,12 @@ class SearchRoutesView(APIView):
             driver_profile__verification_status='approved'
         ).select_related('driver_profile__user', 'driver_profile__vehicle')
 
-        # Filter by date if provided
-        if date_str:
-            try:
-                search_date = date.fromisoformat(date_str)
-                routes = routes.filter(date=search_date)
-            except ValueError:
-                return Response({"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+        # Always filter by date for vehicle searches
+        try:
+            search_date = date.fromisoformat(date_str)
+            routes = routes.filter(date=search_date)
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = SearchRouteSerializer(routes, many=True, context={'request': request})
         return Response({"routes": serializer.data}, status=status.HTTP_200_OK)
