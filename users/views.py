@@ -711,7 +711,7 @@ class ReservationListCreateView(ListCreateAPIView):
             tx_ref = self.request.data['tx_ref']
 
         # Calculate amount based on seats and base fare
-        reservation_seats = self.request.data.get('reservation_seats', '')
+        reservation_seats = self.request.data.get('reservation_seats') or self.request.data.get('selected_seats') or ''
         seats_count = len([s.strip() for s in reservation_seats.split(',') if s.strip()]) if reservation_seats else 1  # Default to 1 if no seats specified
         logger.info(f"Seats selected: {reservation_seats}, Count: {seats_count}")
 
