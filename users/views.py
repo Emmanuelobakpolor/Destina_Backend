@@ -403,7 +403,7 @@ class AllReservationsView(ListCreateAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return Reservation.objects.all().order_by('-created_at')
+        return Reservation.objects.filter(status='pending').order_by('-created_at')
 
 class UpdateUserProfileView(APIView):
     permission_classes = [IsAuthenticated]
