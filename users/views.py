@@ -1664,13 +1664,16 @@ class UpdateUserLocationView(APIView):
         latitude = request.data.get('latitude')
         longitude = request.data.get('longitude')
 
+        # Log missing payload for debugging
         if latitude is None or longitude is None:
+            logger.warning(f"UpdateUserLocationView: Missing latitude/longitude - user={getattr(user, 'id', None)}, data={request.data}")
             return Response({"error": "latitude and longitude are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             latitude = float(latitude)
             longitude = float(longitude)
-        except ValueError:
+        except (ValueError, TypeError):
+            logger.warning(f"UpdateUserLocationView: Invalid latitude/longitude - user={getattr(user, 'id', None)}, lat={latitude}, lon={longitude}")
             return Response({"error": "Invalid latitude or longitude"}, status=status.HTTP_400_BAD_REQUEST)
 
         user.last_location = {
@@ -1678,9 +1681,15 @@ class UpdateUserLocationView(APIView):
             'longitude': longitude,
             'timestamp': timezone.now().isoformat()
         }
-        user.save()
+        try:
+            user.save()
+        except Exception as e:
+            logger.error(f"UpdateUserLocationView: Failed to save location for user={getattr(user, 'id', None)}: {str(e)}")
+            return Response({"error": "Failed to save location"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({"message": "Location updated successfully"}, status=status.HTTP_200_OK)
+        logger.info(f"UpdateUserLocationView: Updated location for user={user.id} -> {user.last_location}")
+        # Return the saved location to make it easy to verify from the client
+        return Response({"message": "Location updated successfully", "last_location": user.last_location}, status=status.HTTP_200_OK)
 
 
 class GetAllUserLocationsView(APIView):
