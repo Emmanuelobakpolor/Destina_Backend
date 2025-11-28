@@ -1654,3 +1654,59 @@ class EnableUserView(APIView):
             return Response({"message": f"User {user.email} enabled successfully"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class UpdateUserLocationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+
+        if latitude is None or longitude is None:
+            return Response({"error": "latitude and longitude are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except ValueError:
+            return Response({"error": "Invalid latitude or longitude"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.last_location = {
+            'latitude': latitude,
+            'longitude': longitude,
+            'timestamp': timezone.now().isoformat()
+        }
+        user.save()
+
+        return Response({"message": "Location updated successfully"}, status=status.HTTP_200_OK)
+
+
+class GetAllUserLocationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'admin':
+            return Response({"error": "Only admins can access user locations"}, status=status.HTTP_403_FORBIDDEN)
+
+        role_filter = request.query_params.get('role')  # Optional: filter by 'user' or 'driver'
+        users = User.objects.filter(is_active=True)
+        if role_filter in ['user', 'driver']:
+            users = users.filter(role=role_filter)
+
+        locations = []
+        for u in users:
+            if u.last_location:
+                locations.append({
+                    'user_id': u.id,
+                    'email': u.email,
+                    'role': u.role,
+                    'full_name': u.full_name,
+                    'latitude': u.last_location.get('latitude'),
+                    'longitude': u.last_location.get('longitude'),
+                    'timestamp': u.last_location.get('timestamp')
+                })
+
+        return Response({"locations": locations}, status=status.HTTP_200_OK)

@@ -42,6 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     profile_picture = models.ImageField(upload_to='user_profile_pictures/%Y/%m/%d/', blank=True, null=True)
     wallet = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     todays_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    last_location = models.JSONField(blank=True, null=True)  # Store {'latitude': float, 'longitude': float, 'timestamp': datetime}
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
