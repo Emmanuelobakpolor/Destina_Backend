@@ -48,4 +48,6 @@ urlpatterns = [
     path('disable-user/', DisableUserView.as_view(), name='disable-user'),
     path('enable-user/', EnableUserView.as_view(), name='enable-user'),
     path('delete-user/', DeleteUserView.as_view(), name='delete-user'),
+    path('update-user-location/', UpdateUserLocationView.as_view(), name='update-user-location'),
+    path('all-user-locations/', GetAllUserLocationsView.as_view(), name='all-user-locations'),
 ]
