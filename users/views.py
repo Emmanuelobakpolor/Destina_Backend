@@ -1688,6 +1688,7 @@ class GetAllUserLocationsView(APIView):
 
     def get(self, request):
         user = request.user
+
         
 
         role_filter = request.query_params.get('role')  # Optional: filter by 'user' or 'driver'
