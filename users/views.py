@@ -1688,8 +1688,7 @@ class GetAllUserLocationsView(APIView):
 
     def get(self, request):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Only admins can access user locations"}, status=status.HTTP_403_FORBIDDEN)
+        
 
         role_filter = request.query_params.get('role')  # Optional: filter by 'user' or 'driver'
         users = User.objects.filter(is_active=True)
