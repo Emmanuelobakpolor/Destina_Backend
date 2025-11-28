@@ -716,8 +716,11 @@ class ReservationListCreateView(ListCreateAPIView):
         logger.info(f"Seats selected: {reservation_seats}, Count: {seats_count}")
 
         ride_type = self.request.data.get('ride_type')
-        base_fare = Decimal('200')  # Default fare for bus or fallback
-        if ride_type == 'vehicle':
+        if ride_type == 'bus':
+            calculated_amount = Decimal(self.request.data.get('amount', '0'))
+            logger.info(f"Using provided amount for bus: {calculated_amount}")
+        else:
+            base_fare = Decimal('200')  # Default fare for vehicle or fallback
             route_id = self.request.data.get('route_id')
             if route_id:
                 try:
@@ -730,8 +733,8 @@ class ReservationListCreateView(ListCreateAPIView):
             else:
                 logger.info("No route_id for vehicle, using default fare")
 
-        calculated_amount = seats_count * base_fare
-        logger.info(f"Calculated amount: {calculated_amount} (seats: {seats_count} * fare: {base_fare})")
+            calculated_amount = seats_count * base_fare
+            logger.info(f"Calculated amount: {calculated_amount} (seats: {seats_count} * fare: {base_fare})")
 
         reservation = serializer.save(user=self.request.user, tx_ref=tx_ref, amount=calculated_amount)
         logger.info(f"Reservation created with ID: {reservation.id}, tx_ref: {tx_ref}, ride_type: {reservation.ride_type}, amount: {calculated_amount}")
