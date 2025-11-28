@@ -1383,8 +1383,8 @@ class FlutterwaveWebhookView(APIView):
                 # Find reservation using the client-generated tx_ref
                 reservation = Reservation.objects.get(tx_ref=tx_ref)
             except Reservation.DoesNotExist:
-                logger.error(f"Reservation not found for tx_ref: {tx_ref}")
-                return Response({"error": "Reservation not found"}, status=status.HTTP_404_NOT_FOUND)
+                logger.info(f"Reservation not found for tx_ref: {tx_ref} - likely created after payment verification by frontend")
+                return Response({"message": "Payment successful, reservation will be created by frontend"}, status=status.HTTP_200_OK)
 
             # Use transaction to ensure atomicity
             with transaction.atomic():
