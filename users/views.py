@@ -1698,7 +1698,6 @@ class GetAllUserLocationsView(APIView):
     def get(self, request):
         user = request.user
 
-        
 
         role_filter = request.query_params.get('role')  # Optional: filter by 'user' or 'driver'
         users = User.objects.filter(is_active=True)
@@ -1719,3 +1718,69 @@ class GetAllUserLocationsView(APIView):
                 })
 
         return Response({"locations": locations}, status=status.HTTP_200_OK)
+
+
+
+
+
+class GetUserLocationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+            if not user.last_location:
+                return Response({"error": "Location not available"}, status=status.HTTP_404_NOT_FOUND)
+
+            location = user.last_location
+            timestamp_str = location.get('timestamp')
+            is_stale = True
+            if timestamp_str:
+                from datetime import datetime
+                timestamp = datetime.fromisoformat(timestamp_str)
+                now = timezone.now()
+                is_stale = (now - timestamp).total_seconds() > 300  # 5 minutes
+
+            return Response({
+                "user_id": user.id,
+                "latitude": location.get('latitude'),
+                "longitude": location.get('longitude'),
+                "timestamp": location.get('timestamp'),
+                "is_stale": is_stale
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class UpdateUserLocationByIdView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        user = request.user
+        if user.role != 'admin':
+            return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            target_user = User.objects.get(id=user_id)
+            latitude = request.data.get('latitude')
+            longitude = request.data.get('longitude')
+
+            if latitude is None or longitude is None:
+                return Response({"error": "latitude and longitude are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                latitude = float(latitude)
+                longitude = float(longitude)
+            except (ValueError, TypeError):
+                return Response({"error": "Invalid latitude or longitude"}, status=status.HTTP_400_BAD_REQUEST)
+
+            target_user.last_location = {
+                'latitude': latitude,
+                'longitude': longitude,
+                'timestamp': timezone.now().isoformat()
+            }
+            target_user.save()
+
+            return Response({"message": "Location updated successfully", "last_location": target_user.last_location}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
