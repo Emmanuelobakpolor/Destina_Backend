@@ -1757,8 +1757,7 @@ class UpdateUserLocationByIdView(APIView):
 
     def post(self, request, user_id):
         user = request.user
-        if user.role != 'admin':
-            return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+        
 
         try:
             target_user = User.objects.get(id=user_id)
