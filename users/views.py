@@ -880,6 +880,27 @@ class DriverReservationsView(APIView):
             return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+class GetDriverRecentReservationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role != 'driver':
+            return Response({"error": "Only drivers can access their reservations"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.driver_profile
+            recent_reservations = Reservation.objects.filter(
+                driver=profile,
+                ride_type='vehicle',
+                status__in=['paid', 'completed']
+            ).select_related('user', 'route').order_by('-created_at')[:3]
+            serializer = ReservationSerializer(recent_reservations, many=True, context={'request': request})
+            return Response({"reservations": serializer.data}, status=status.HTTP_200_OK)
+        except DriverProfile.DoesNotExist:
+            return Response({"error": "Driver profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
 class CompletedReservationsView(ListCreateAPIView):
     serializer_class = ReservationSerializer
     permission_classes = [IsAuthenticated]
