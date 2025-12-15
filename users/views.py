@@ -188,7 +188,51 @@ class VerifyLoginView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             code = serializer.validated_data['code']
-            if settings.BYPASS_OTP:
+            if settings.BYPASS_OTP and email == 'lexisdevelopmentltd@gmail.com':
+                # Skip OTP entirely for this email in bypass mode
+                user = User.objects.filter(email=email).first()
+                if user:
+                    refresh = RefreshToken.for_user(user)
+                    response_data = {
+                        "refresh": str(refresh),
+                        "access": str(refresh.access_token),
+                        "user": { # This structure should be consistent
+                            "id": user.id,
+                            "email": user.email,
+                            "role": user.role,
+                            "full_name": user.full_name,
+                            "phone_number": user.phone_number,
+                        },
+                        "message": "Login verified"
+                    }
+                    if user.role == 'driver':
+                        try:
+                            profile = user.driver_profile
+                            # Find the selfie document
+                            selfie_doc = DriverDocument.objects.filter(user=user, document_type='selfie').first()
+                            selfie_url = None
+                            if selfie_doc and hasattr(selfie_doc.file, 'url'):
+                                # Construct absolute URL if it's not already
+                                request_obj = self.request
+                                selfie_url = request_obj.build_absolute_uri(selfie_doc.file.url)
+
+                            response_data["user"]["verification_status"] = profile.verification_status
+                            response_data["user"]["first_name"] = profile.first_name
+                            response_data["user"]["selfie_url"] = selfie_url
+                        except DriverProfile.DoesNotExist: # Handle case where profile doesn't exist yet
+                            response_data["user"]["verification_status"] = 'pending' # Assume pending if no profile
+                            response_data["user"]["first_name"] = 'Driver' # Default name
+                            response_data["user"]["selfie_url"] = None
+
+                    # Add profile picture URL for all users
+                    profile_picture_url = None
+                    if user.profile_picture and hasattr(user.profile_picture, 'url'):
+                        profile_picture_url = request.build_absolute_uri(user.profile_picture.url)
+                    response_data["user"]["profile_picture"] = profile_picture_url
+
+                    return Response(response_data, status=status.HTTP_200_OK)
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            elif settings.BYPASS_OTP:
                 if code == "123456":
                     user = User.objects.filter(email=email).first()
                     if user:
